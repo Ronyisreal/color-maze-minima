@@ -21,16 +21,16 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export const getDifficultyConfig = (difficulty: Difficulty, level: number): DifficultyConfig => {
   const baseConfigs = {
-    easy: { numRegions: 6, minColors: 3, complexity: 0.3 },
-    medium: { numRegions: 10, minColors: 4, complexity: 0.5 },
-    hard: { numRegions: 15, minColors: 5, complexity: 0.7 }
+    easy: { numRegions: 8, minColors: 3, complexity: 0.3 },
+    medium: { numRegions: 12, minColors: 4, complexity: 0.5 },
+    hard: { numRegions: 16, minColors: 5, complexity: 0.7 }
   };
   
   const config = baseConfigs[difficulty];
   return {
-    numRegions: config.numRegions + Math.floor(level / 3),
+    numRegions: config.numRegions + Math.floor(level / 2),
     minColors: config.minColors,
-    complexity: Math.min(config.complexity + (level - 1) * 0.1, 0.9)
+    complexity: Math.min(config.complexity + (level - 1) * 0.05, 0.9)
   };
 };
 
@@ -38,72 +38,48 @@ const distance = (p1: Point, p2: Point): number => {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 };
 
-const generateVoronoiCell = (seed: Point, seeds: Point[], bounds: { width: number; height: number; margin: number }): Point[] => {
+// Generate organic, curved shapes similar to the reference image
+const generateOrganicShape = (center: Point, size: number, complexity: number): Point[] => {
   const vertices: Point[] = [];
-  const step = 8;
+  const numPoints = 16 + Math.floor(complexity * 12); // More points for smoother curves
   
-  for (let x = bounds.margin; x < bounds.width - bounds.margin; x += step) {
-    for (let y = bounds.margin; y < bounds.height - bounds.margin; y += step) {
-      const point = { x, y };
-      let isClosestToSeed = true;
-      const distToSeed = distance(point, seed);
-      
-      for (const otherSeed of seeds) {
-        if (otherSeed !== seed && distance(point, otherSeed) < distToSeed) {
-          isClosestToSeed = false;
-          break;
-        }
-      }
-      
-      if (isClosestToSeed) {
-        vertices.push(point);
-      }
-    }
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (2 * Math.PI * i) / numPoints;
+    
+    // Create organic variation in radius
+    const baseRadius = size * (0.6 + Math.random() * 0.4);
+    const organicVariation = Math.sin(angle * 3 + Math.random() * Math.PI) * size * 0.3;
+    const radius = baseRadius + organicVariation;
+    
+    // Add some noise for more organic feel
+    const noise = (Math.random() - 0.5) * size * 0.2;
+    
+    const x = center.x + Math.cos(angle) * (radius + noise);
+    const y = center.y + Math.sin(angle) * (radius + noise);
+    
+    vertices.push({ x, y });
   }
   
-  if (vertices.length === 0) {
-    const offset = 30;
-    return [
-      { x: seed.x - offset, y: seed.y - offset },
-      { x: seed.x + offset, y: seed.y - offset },
-      { x: seed.x + offset, y: seed.y + offset },
-      { x: seed.x - offset, y: seed.y + offset }
-    ];
-  }
-  
-  return convexHull(vertices);
+  return smoothVertices(vertices);
 };
 
-const convexHull = (points: Point[]): Point[] => {
-  if (points.length < 3) return points;
+// Smooth vertices to create more organic curves
+const smoothVertices = (vertices: Point[]): Point[] => {
+  const smoothed: Point[] = [];
   
-  const hull: Point[] = [];
-  const sortedPoints = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
-  
-  // Build lower hull
-  for (const point of sortedPoints) {
-    while (hull.length >= 2 && cross(hull[hull.length - 2], hull[hull.length - 1], point) <= 0) {
-      hull.pop();
-    }
-    hull.push(point);
+  for (let i = 0; i < vertices.length; i++) {
+    const prev = vertices[(i - 1 + vertices.length) % vertices.length];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    // Apply simple smoothing
+    const smoothX = (prev.x + curr.x * 2 + next.x) / 4;
+    const smoothY = (prev.y + curr.y * 2 + next.y) / 4;
+    
+    smoothed.push({ x: smoothX, y: smoothY });
   }
   
-  // Build upper hull
-  const t = hull.length + 1;
-  for (let i = sortedPoints.length - 2; i >= 0; i--) {
-    const point = sortedPoints[i];
-    while (hull.length >= t && cross(hull[hull.length - 2], hull[hull.length - 1], point) <= 0) {
-      hull.pop();
-    }
-    hull.push(point);
-  }
-  
-  hull.pop(); // Remove last point as it's the same as the first
-  return hull;
-};
-
-const cross = (O: Point, A: Point, B: Point): number => {
-  return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+  return smoothed;
 };
 
 const calculateCentroid = (vertices: Point[]): Point => {
@@ -112,27 +88,25 @@ const calculateCentroid = (vertices: Point[]): Point => {
   return { x, y };
 };
 
-const findAdjacencies = (regions: Region[]): void => {
-  const tolerance = 15;
-  
+// Check if two organic shapes overlap or are adjacent
+const areShapesAdjacent = (shape1: Point[], shape2: Point[], tolerance: number): boolean => {
+  for (const p1 of shape1) {
+    for (const p2 of shape2) {
+      if (distance(p1, p2) < tolerance) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+const findAdjacencies = (regions: Region[], tolerance: number): void => {
   for (let i = 0; i < regions.length; i++) {
     for (let j = i + 1; j < regions.length; j++) {
       const region1 = regions[i];
       const region2 = regions[j];
       
-      let isAdjacent = false;
-      
-      for (const vertex1 of region1.vertices) {
-        for (const vertex2 of region2.vertices) {
-          if (distance(vertex1, vertex2) < tolerance) {
-            isAdjacent = true;
-            break;
-          }
-        }
-        if (isAdjacent) break;
-      }
-      
-      if (isAdjacent) {
+      if (areShapesAdjacent(region1.vertices, region2.vertices, tolerance)) {
         region1.adjacentRegions.push(region2.id);
         region2.adjacentRegions.push(region1.id);
       }
@@ -142,189 +116,104 @@ const findAdjacencies = (regions: Region[]): void => {
 
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
   const config = getDifficultyConfig(difficulty, 1);
-  const margin = 50;
-  
-  // Create a tangled, messy formation in the center
   const centerX = width / 2;
   const centerY = height / 2;
-  const baseRadius = Math.min(width, height) * 0.2; // Base size for the tangled shape
   
-  // Generate overlapping, irregular seeds based on difficulty
-  const seeds: Point[] = [];
+  // Create a smaller, more concentrated formation
+  const formationRadius = Math.min(width, height) * 0.25;
   
-  // Difficulty-based overlap and messiness
-  const overlapFactors = {
-    easy: { overlap: 0.8, messiness: 0.3, clusters: 2 },
-    medium: { overlap: 0.6, messiness: 0.5, clusters: 3 },
-    hard: { overlap: 0.4, messiness: 0.7, clusters: 4 }
-  };
+  // Size settings based on difficulty
+  const sizeFactor = {
+    easy: { base: 45, variation: 0.3, overlap: 0.7 },
+    medium: { base: 35, variation: 0.4, overlap: 0.6 },
+    hard: { base: 25, variation: 0.5, overlap: 0.5 }
+  }[difficulty];
   
-  const factor = overlapFactors[difficulty];
+  const regions: Region[] = [];
+  const attempts = config.numRegions * 3; // Multiple attempts to place shapes
   
-  // Create overlapping clusters for tangled effect
-  for (let cluster = 0; cluster < factor.clusters; cluster++) {
-    const clusterSeeds = Math.ceil(config.numRegions / factor.clusters);
+  for (let attempt = 0; attempt < attempts && regions.length < config.numRegions; attempt++) {
+    // Create more clustered positioning
+    const angle = Math.random() * 2 * Math.PI;
+    const radiusFromCenter = Math.random() * formationRadius * sizeFactor.overlap;
     
-    // Each cluster has its own center with some offset
-    const clusterAngle = (2 * Math.PI * cluster) / factor.clusters;
-    const clusterOffset = baseRadius * 0.4 * (Math.random() + 0.5);
-    const clusterCenterX = centerX + Math.cos(clusterAngle) * clusterOffset;
-    const clusterCenterY = centerY + Math.sin(clusterAngle) * clusterOffset;
+    // Add some clustering bias towards existing shapes
+    let targetX = centerX + Math.cos(angle) * radiusFromCenter;
+    let targetY = centerY + Math.sin(angle) * radiusFromCenter;
     
-    for (let i = 0; i < clusterSeeds && seeds.length < config.numRegions; i++) {
-      // Create highly irregular positioning
-      const angle = Math.random() * 2 * Math.PI;
-      const radius = Math.random() * baseRadius * factor.overlap;
+    // If we have existing regions, sometimes cluster near them
+    if (regions.length > 0 && Math.random() < 0.6) {
+      const existingRegion = regions[Math.floor(Math.random() * regions.length)];
+      const clusterDistance = sizeFactor.base * (0.8 + Math.random() * 0.4);
+      const clusterAngle = Math.random() * 2 * Math.PI;
       
-      // Add extreme messiness - random distortions
-      const messinessX = (Math.random() - 0.5) * baseRadius * factor.messiness;
-      const messinessY = (Math.random() - 0.5) * baseRadius * factor.messiness;
-      
-      const x = clusterCenterX + Math.cos(angle) * radius + messinessX;
-      const y = clusterCenterY + Math.sin(angle) * radius + messinessY;
-      
-      // Allow some seeds to go beyond normal bounds for overlapping effect
-      const clampedX = Math.max(margin * 0.5, Math.min(width - margin * 0.5, x));
-      const clampedY = Math.max(margin * 0.5, Math.min(height - margin * 0.5, y));
-      
-      seeds.push({ x: clampedX, y: clampedY });
+      targetX = existingRegion.center.x + Math.cos(clusterAngle) * clusterDistance;
+      targetY = existingRegion.center.y + Math.sin(clusterAngle) * clusterDistance;
     }
-  }
-  
-  // Add some completely random seeds for extra chaos on higher difficulties
-  if (difficulty === 'medium' || difficulty === 'hard') {
-    const chaosSeeds = difficulty === 'hard' ? 3 : 2;
-    for (let i = 0; i < chaosSeeds && seeds.length < config.numRegions; i++) {
-      const angle = Math.random() * 2 * Math.PI;
-      const radius = Math.random() * baseRadius * 1.2;
-      const x = centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * baseRadius;
-      const y = centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * baseRadius;
+    
+    // Keep within reasonable bounds
+    targetX = Math.max(100, Math.min(width - 100, targetX));
+    targetY = Math.max(100, Math.min(height - 100, targetY));
+    
+    const center = { x: targetX, y: targetY };
+    const baseSize = sizeFactor.base * (1 + (Math.random() - 0.5) * sizeFactor.variation);
+    
+    // Check if this position would create too much overlap with existing shapes
+    let tooMuchOverlap = false;
+    for (const existingRegion of regions) {
+      const dist = distance(center, existingRegion.center);
+      if (dist < baseSize * 0.4) { // Prevent excessive overlap
+        tooMuchOverlap = true;
+        break;
+      }
+    }
+    
+    if (!tooMuchOverlap) {
+      const vertices = generateOrganicShape(center, baseSize, config.complexity);
+      const actualCenter = calculateCentroid(vertices);
       
-      seeds.push({ 
-        x: Math.max(margin, Math.min(width - margin, x)),
-        y: Math.max(margin, Math.min(height - margin, y))
+      regions.push({
+        id: `region-${regions.length + 1}`,
+        vertices,
+        center: actualCenter,
+        color: null,
+        adjacentRegions: []
       });
     }
   }
   
-  // Generate irregular Voronoi cells with very loose bounds for overlapping
-  const regions: Region[] = [];
-  const looseBounds = {
-    width: width,
-    height: height,
-    margin: 0 // No margin to allow maximum irregularity
-  };
-  
-  for (let i = 0; i < seeds.length; i++) {
-    const seed = seeds[i];
-    const vertices = generateIrregularVoronoiCell(seed, seeds, looseBounds, difficulty);
-    const center = calculateCentroid(vertices);
-    
-    regions.push({
-      id: `region-${i + 1}`,
-      vertices,
-      center,
-      color: null,
-      adjacentRegions: []
-    });
-  }
-  
-  // Find adjacencies with very high tolerance for maximum tangling
+  // Find adjacencies with appropriate tolerance
   const adjacencyTolerance = {
-    easy: 35,
-    medium: 45,
-    hard: 55
-  };
+    easy: 25,
+    medium: 30,
+    hard: 35
+  }[difficulty];
   
-  findAdjacenciesWithTolerance(regions, adjacencyTolerance[difficulty]);
+  findAdjacencies(regions, adjacencyTolerance);
   
-  // Force additional connections for more tangling
+  // Ensure minimum connectivity
   regions.forEach(region => {
-    if (region.adjacentRegions.length < 2) {
-      // Find closest regions and force connections
-      const distances = regions
-        .filter(r => r.id !== region.id && !region.adjacentRegions.includes(r.id))
-        .map(r => ({ region: r, distance: distance(region.center, r.center) }))
-        .sort((a, b) => a.distance - b.distance);
+    if (region.adjacentRegions.length === 0) {
+      // Find the closest region and force a connection
+      let closestRegion: Region | null = null;
+      let minDistance = Infinity;
       
-      // Connect to 1-2 closest regions for guaranteed tangling
-      const connectionsToAdd = Math.min(2, distances.length);
-      for (let i = 0; i < connectionsToAdd; i++) {
-        const targetRegion = distances[i].region;
-        region.adjacentRegions.push(targetRegion.id);
-        targetRegion.adjacentRegions.push(region.id);
+      for (const otherRegion of regions) {
+        if (otherRegion.id !== region.id) {
+          const dist = distance(region.center, otherRegion.center);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestRegion = otherRegion;
+          }
+        }
+      }
+      
+      if (closestRegion) {
+        region.adjacentRegions.push(closestRegion.id);
+        closestRegion.adjacentRegions.push(region.id);
       }
     }
   });
   
   return regions;
-};
-
-const generateIrregularVoronoiCell = (seed: Point, seeds: Point[], bounds: { width: number; height: number; margin: number }, difficulty: Difficulty): Point[] => {
-  const vertices: Point[] = [];
-  
-  // Adjust step size based on difficulty for more/less irregular shapes
-  const stepSizes = { easy: 12, medium: 10, hard: 8 };
-  const step = stepSizes[difficulty];
-  
-  for (let x = bounds.margin; x < bounds.width - bounds.margin; x += step) {
-    for (let y = bounds.margin; y < bounds.height - bounds.margin; y += step) {
-      const point = { x, y };
-      let isClosestToSeed = true;
-      const distToSeed = distance(point, seed);
-      
-      for (const otherSeed of seeds) {
-        if (otherSeed !== seed && distance(point, otherSeed) < distToSeed) {
-          isClosestToSeed = false;
-          break;
-        }
-      }
-      
-      if (isClosestToSeed) {
-        vertices.push(point);
-      }
-    }
-  }
-  
-  if (vertices.length === 0) {
-    // Create very irregular fallback shapes
-    const irregularityFactor = { easy: 0.3, medium: 0.5, hard: 0.7 }[difficulty];
-    const baseSize = 25;
-    const irregularSize = baseSize * (1 + irregularityFactor);
-    
-    return [
-      { x: seed.x - irregularSize + Math.random() * 20, y: seed.y - irregularSize + Math.random() * 20 },
-      { x: seed.x + irregularSize - Math.random() * 20, y: seed.y - irregularSize + Math.random() * 20 },
-      { x: seed.x + irregularSize - Math.random() * 20, y: seed.y + irregularSize - Math.random() * 20 },
-      { x: seed.x - irregularSize + Math.random() * 20, y: seed.y + irregularSize - Math.random() * 20 }
-    ];
-  }
-  
-  return convexHull(vertices);
-};
-
-const findAdjacenciesWithTolerance = (regions: Region[], tolerance: number): void => {
-  for (let i = 0; i < regions.length; i++) {
-    for (let j = i + 1; j < regions.length; j++) {
-      const region1 = regions[i];
-      const region2 = regions[j];
-      
-      let isAdjacent = false;
-      
-      for (const vertex1 of region1.vertices) {
-        for (const vertex2 of region2.vertices) {
-          if (distance(vertex1, vertex2) < tolerance) {
-            isAdjacent = true;
-            break;
-          }
-        }
-        if (isAdjacent) break;
-      }
-      
-      if (isAdjacent) {
-        region1.adjacentRegions.push(region2.id);
-        region2.adjacentRegions.push(region1.id);
-      }
-    }
-  }
 };
