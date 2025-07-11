@@ -119,29 +119,26 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   const centerX = width / 2;
   const centerY = height / 2;
   
-  // Create a smaller, more concentrated formation
-  const formationRadius = Math.min(width, height) * 0.25;
+  // Increase the formation area to make the figure larger
+  const formationRadius = Math.min(width, height) * 0.35; // Increased from 0.25
   
-  // Size settings based on difficulty
+  // Increase base sizes for larger regions
   const sizeFactor = {
-    easy: { base: 45, variation: 0.3, overlap: 0.7 },
-    medium: { base: 35, variation: 0.4, overlap: 0.6 },
-    hard: { base: 25, variation: 0.5, overlap: 0.5 }
+    easy: { base: 65, variation: 0.3, overlap: 0.8 }, // Increased from 45
+    medium: { base: 50, variation: 0.4, overlap: 0.7 }, // Increased from 35
+    hard: { base: 40, variation: 0.5, overlap: 0.6 } // Increased from 25
   }[difficulty];
   
   const regions: Region[] = [];
-  const attempts = config.numRegions * 3; // Multiple attempts to place shapes
+  const attempts = config.numRegions * 3;
   
   for (let attempt = 0; attempt < attempts && regions.length < config.numRegions; attempt++) {
-    // Create more clustered positioning
     const angle = Math.random() * 2 * Math.PI;
     const radiusFromCenter = Math.random() * formationRadius * sizeFactor.overlap;
     
-    // Add some clustering bias towards existing shapes
     let targetX = centerX + Math.cos(angle) * radiusFromCenter;
     let targetY = centerY + Math.sin(angle) * radiusFromCenter;
     
-    // If we have existing regions, sometimes cluster near them
     if (regions.length > 0 && Math.random() < 0.6) {
       const existingRegion = regions[Math.floor(Math.random() * regions.length)];
       const clusterDistance = sizeFactor.base * (0.8 + Math.random() * 0.4);
@@ -151,18 +148,17 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
       targetY = existingRegion.center.y + Math.sin(clusterAngle) * clusterDistance;
     }
     
-    // Keep within reasonable bounds
-    targetX = Math.max(100, Math.min(width - 100, targetX));
-    targetY = Math.max(100, Math.min(height - 100, targetY));
+    // Adjust bounds for larger figure
+    targetX = Math.max(120, Math.min(width - 120, targetX));
+    targetY = Math.max(120, Math.min(height - 120, targetY));
     
     const center = { x: targetX, y: targetY };
     const baseSize = sizeFactor.base * (1 + (Math.random() - 0.5) * sizeFactor.variation);
     
-    // Check if this position would create too much overlap with existing shapes
     let tooMuchOverlap = false;
     for (const existingRegion of regions) {
       const dist = distance(center, existingRegion.center);
-      if (dist < baseSize * 0.4) { // Prevent excessive overlap
+      if (dist < baseSize * 0.4) {
         tooMuchOverlap = true;
         break;
       }
@@ -182,19 +178,16 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     }
   }
   
-  // Find adjacencies with appropriate tolerance
   const adjacencyTolerance = {
-    easy: 25,
-    medium: 30,
-    hard: 35
+    easy: 30, // Increased tolerance for larger shapes
+    medium: 35,
+    hard: 40
   }[difficulty];
   
   findAdjacencies(regions, adjacencyTolerance);
   
-  // Ensure minimum connectivity
   regions.forEach(region => {
     if (region.adjacentRegions.length === 0) {
-      // Find the closest region and force a connection
       let closestRegion: Region | null = null;
       let minDistance = Infinity;
       
