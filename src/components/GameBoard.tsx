@@ -111,47 +111,20 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
-  // Check if two regions are connected through any path
-  const areRegionsConnected = (regionId1: string, regionId2: string, allRegions: Region[]): boolean => {
-    if (regionId1 === regionId2) return false;
-    
-    const visited = new Set<string>();
-    const queue: string[] = [regionId1];
-    
-    while (queue.length > 0) {
-      const currentId = queue.shift()!;
-      if (visited.has(currentId)) continue;
-      visited.add(currentId);
-      
-      if (currentId === regionId2) return true;
-      
-      const currentRegion = allRegions.find(r => r.id === currentId);
-      if (!currentRegion) continue;
-      
-      // Add all adjacent regions to queue
-      for (const adjId of currentRegion.adjacentRegions) {
-        if (!visited.has(adjId)) {
-          queue.push(adjId);
-        }
-      }
-    }
-    
-    return false;
-  };
-
-  // Check if placing a color creates any conflicts
+  // Check if placing a color creates any conflicts - FIXED LOGIC
   const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
-    // Find all regions with the same color
-    const sameColorRegions = allRegions.filter(r => r.color === color && r.id !== regionId);
+    const currentRegion = allRegions.find(r => r.id === regionId);
+    if (!currentRegion) return false;
     
-    // Check if the current region is connected to any region with the same color
-    for (const sameColorRegion of sameColorRegions) {
-      if (areRegionsConnected(regionId, sameColorRegion.id, allRegions)) {
-        return true; // Conflict found
+    // Check if any directly adjacent region has the same color
+    for (const adjacentId of currentRegion.adjacentRegions) {
+      const adjacentRegion = allRegions.find(r => r.id === adjacentId);
+      if (adjacentRegion && adjacentRegion.color === color) {
+        return true; // Conflict found - directly adjacent region has same color
       }
     }
     
-    return false; // No conflicts
+    return false; // No conflicts with directly adjacent regions
   };
 
   const handleRegionColor = (regionId: string) => {
@@ -184,13 +157,13 @@ export const GameBoard: React.FC = () => {
       return region;
     });
 
-    // Check for conflicts using the new logic
+    // Check for conflicts using the fixed logic
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
       // Deduct 5 points for invalid move
       setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
         title: "Invalid move! (-5 points)",
-        description: "This color is connected to another region with the same color.",
+        description: "This color is directly adjacent to another region with the same color.",
         variant: "destructive",
       });
       return;
@@ -319,7 +292,7 @@ export const GameBoard: React.FC = () => {
                 className="text-sm"
               >
                 <Frown className="w-4 h-4 mr-1" />
-                I bail 😢
+                I bail
               </Button>
             </div>
           </div>

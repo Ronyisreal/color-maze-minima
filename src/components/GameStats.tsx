@@ -63,7 +63,9 @@ export const GameStats: React.FC<GameStatsProps> = ({
 
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm">
-            <Target className="w-4 h-4" />
+            <div className="w-4 h-4 bg-black rounded-full flex items-center justify-center">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            </div>
             Minimum Colors
           </span>
           <Badge variant="secondary">{minimumColors}</Badge>
