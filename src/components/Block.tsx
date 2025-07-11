@@ -24,6 +24,9 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
   };
 
   const renderShape = () => {
+    const strokeWidth = isSelected ? 3 : 2;
+    const className = "cursor-pointer hover:stroke-gray-800 transition-all duration-200";
+
     if (block.shape === 'circle') {
       return (
         <circle
@@ -32,20 +35,20 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
           r={block.width / 2}
           fill={getFill()}
           stroke={getStroke()}
-          strokeWidth={isSelected ? 3 : 2}
-          className="cursor-pointer hover:stroke-gray-800 transition-all duration-200"
+          strokeWidth={strokeWidth}
+          className={className}
           onClick={handleClick}
         />
       );
-    } else if (block.shape === 'polygon' && block.vertices) {
+    } else if (block.vertices && block.vertices.length > 0) {
       const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
       return (
         <polygon
           points={points}
           fill={getFill()}
           stroke={getStroke()}
-          strokeWidth={isSelected ? 3 : 2}
-          className="cursor-pointer hover:stroke-gray-800 transition-all duration-200"
+          strokeWidth={strokeWidth}
+          className={className}
           onClick={handleClick}
         />
       );
@@ -58,8 +61,8 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
           height={block.height}
           fill={getFill()}
           stroke={getStroke()}
-          strokeWidth={isSelected ? 3 : 2}
-          className="cursor-pointer hover:stroke-gray-800 transition-all duration-200"
+          strokeWidth={strokeWidth}
+          className={className}
           onClick={handleClick}
         />
       );
@@ -69,7 +72,6 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
   return (
     <g>
       {renderShape()}
-      {/* Block ID label for debugging */}
       <text
         x={block.x}
         y={block.y}

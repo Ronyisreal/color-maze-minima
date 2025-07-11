@@ -1,13 +1,15 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Palette, Star } from 'lucide-react';
+import { Trophy, Target, Palette, Star, Award } from 'lucide-react';
+import { ScoreData } from '@/utils/scoreCalculator';
 
 interface GameStatsProps {
   level: number;
   minimumColors: number;
   colorsUsed: number;
   gameCompleted: boolean;
+  score?: ScoreData | null;
 }
 
 export const GameStats: React.FC<GameStatsProps> = ({
@@ -15,6 +17,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
   minimumColors,
   colorsUsed,
   gameCompleted,
+  score,
 }) => {
   const getEfficiencyScore = () => {
     if (!gameCompleted) return null;
@@ -29,6 +32,17 @@ export const GameStats: React.FC<GameStatsProps> = ({
     if (colorsUsed === minimumColors) return 'default';
     if (colorsUsed <= minimumColors + 1) return 'secondary';
     return 'destructive';
+  };
+
+  const getGradeColor = (grade: string) => {
+    switch (grade) {
+      case 'S': return 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white';
+      case 'A': return 'bg-green-500 text-white';
+      case 'B': return 'bg-blue-500 text-white';
+      case 'C': return 'bg-yellow-500 text-white';
+      case 'D': return 'bg-red-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
   };
 
   return (
@@ -65,6 +79,24 @@ export const GameStats: React.FC<GameStatsProps> = ({
               <Badge variant="outline">{colorsUsed}</Badge>
             </div>
 
+            {score && (
+              <>
+                <div className="border-t pt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Score</span>
+                    <Badge variant="default">{score.totalScore}</Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Grade</span>
+                    <Badge className={getGradeColor(score.grade)}>
+                      {score.grade}
+                    </Badge>
+                  </div>
+                </div>
+              </>
+            )}
+
             <div className="pt-2 border-t">
               <div className="text-center">
                 <Badge variant={getEfficiencyColor()} className="text-sm">
@@ -82,6 +114,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
           <li>Adjacent blocks cannot have the same color</li>
           <li>Use minimum colors to get perfect score</li>
           <li>Dashed lines show block connections</li>
+          <li>Higher difficulty = more points</li>
         </ul>
       </div>
     </div>

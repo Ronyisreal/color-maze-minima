@@ -3,10 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
 import { GameStats } from './GameStats';
+import { DifficultySelector, Difficulty } from './DifficultySelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { RefreshCw, Lightbulb, Trophy } from 'lucide-react';
+import { RefreshCw, Lightbulb, Trophy, Award } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { generateRandomShape, getDifficultyConfig, ShapeVertex } from '@/utils/shapeGenerator';
+import { calculateScore, ScoreData } from '@/utils/scoreCalculator';
 
 export interface BlockData {
   id: string;
@@ -16,8 +19,8 @@ export interface BlockData {
   height: number;
   color: string | null;
   adjacentBlocks: string[];
-  shape: 'circle' | 'rectangle' | 'polygon';
-  vertices?: { x: number; y: number }[];
+  shape: string;
+  vertices?: ShapeVertex[];
 }
 
 const AVAILABLE_COLORS = [
@@ -36,29 +39,37 @@ export const GameBoard: React.FC = () => {
   const [colorsUsed, setColorsUsed] = useState(0);
   const [minimumColors, setMinimumColors] = useState(0);
   const [level, setLevel] = useState(1);
+  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [score, setScore] = useState<ScoreData | null>(null);
+  const [totalScore, setTotalScore] = useState(0);
 
-  const generateRandomBlocks = (count: number = 8) => {
+  const generateRandomBlocks = (difficulty: Difficulty, level: number) => {
+    const config = getDifficultyConfig(difficulty, level);
     const newBlocks: BlockData[] = [];
     const boardWidth = 600;
     const boardHeight = 400;
+    const margin = 80;
 
-    for (let i = 0; i < count; i++) {
-      const shape = Math.random() > 0.3 ? 'polygon' : 'circle';
-      const x = Math.random() * (boardWidth - 100) + 50;
-      const y = Math.random() * (boardHeight - 100) + 50;
-      const size = 40 + Math.random() * 40;
+    // Generate blocks with improved spacing
+    for (let i = 0; i < config.blockCount; i++) {
+      let x, y, attempts = 0;
+      let validPosition = false;
 
-      let vertices: { x: number; y: number }[] = [];
-      if (shape === 'polygon') {
-        const sides = 3 + Math.floor(Math.random() * 4); // 3-6 sides
-        for (let j = 0; j < sides; j++) {
-          const angle = (j * 2 * Math.PI) / sides;
-          vertices.push({
-            x: x + Math.cos(angle) * size,
-            y: y + Math.sin(angle) * size,
-          });
-        }
-      }
+      // Try to find a position that doesn't overlap too much
+      do {
+        x = margin + Math.random() * (boardWidth - 2 * margin);
+        y = margin + Math.random() * (boardHeight - 2 * margin);
+        
+        validPosition = newBlocks.every(block => {
+          const distance = Math.sqrt(Math.pow(x - block.x, 2) + Math.pow(y - block.y, 2));
+          return distance > (config.minSize * config.spacing);
+        });
+        
+        attempts++;
+      } while (!validPosition && attempts < 50);
+
+      const size = config.minSize + Math.random() * (config.maxSize - config.minSize);
+      const { shape, vertices } = generateRandomShape(x, y, size, difficulty);
 
       newBlocks.push({
         id: `block-${i}`,
@@ -69,18 +80,22 @@ export const GameBoard: React.FC = () => {
         color: null,
         adjacentBlocks: [],
         shape,
-        vertices: shape === 'polygon' ? vertices : undefined,
+        vertices,
       });
     }
 
-    // Calculate adjacency based on distance and overlap
+    // Calculate adjacency with improved logic
     newBlocks.forEach((block, index) => {
       newBlocks.forEach((otherBlock, otherIndex) => {
         if (index !== otherIndex) {
           const distance = Math.sqrt(
             Math.pow(block.x - otherBlock.x, 2) + Math.pow(block.y - otherBlock.y, 2)
           );
-          const threshold = (block.width + otherBlock.width) / 2.5; // Adjust for overlap detection
+          
+          // Adjusted threshold based on difficulty
+          const baseThreshold = (block.width + otherBlock.width) / 2;
+          const difficultyMultiplier = difficulty === 'easy' ? 1.3 : difficulty === 'medium' ? 1.2 : 1.1;
+          const threshold = baseThreshold * difficultyMultiplier;
           
           if (distance < threshold) {
             if (!block.adjacentBlocks.includes(otherBlock.id)) {
@@ -91,36 +106,39 @@ export const GameBoard: React.FC = () => {
       });
     });
 
-    // Calculate minimum colors needed using a simple greedy approach
-    const minColors = calculateMinimumColors(newBlocks);
-    setMinimumColors(minColors);
+    // Calculate minimum colors using Welsh-Powell algorithm
+    const minColors = calculateMinimumColorsWelshPowell(newBlocks);
+    setMinimumColors(Math.max(2, minColors)); // Ensure minimum is at least 2
     setBlocks(newBlocks);
   };
 
-  const calculateMinimumColors = (blocks: BlockData[]): number => {
-    // Simple greedy coloring to estimate minimum colors
-    const tempBlocks = [...blocks];
+  const calculateMinimumColorsWelshPowell = (blocks: BlockData[]): number => {
+    // Sort blocks by degree (number of adjacent blocks) in descending order
+    const sortedBlocks = [...blocks].sort((a, b) => b.adjacentBlocks.length - a.adjacentBlocks.length);
     const colorMap = new Map<string, number>();
-    let colorCount = 0;
+    let maxColor = 0;
 
-    tempBlocks.forEach(block => {
+    sortedBlocks.forEach(block => {
       const usedColors = new Set<number>();
+      
+      // Find colors used by adjacent blocks
       block.adjacentBlocks.forEach(adjId => {
         if (colorMap.has(adjId)) {
           usedColors.add(colorMap.get(adjId)!);
         }
       });
 
-      let color = 0;
+      // Find the smallest available color
+      let color = 1;
       while (usedColors.has(color)) {
         color++;
       }
 
       colorMap.set(block.id, color);
-      colorCount = Math.max(colorCount, color + 1);
+      maxColor = Math.max(maxColor, color);
     });
 
-    return colorCount;
+    return maxColor;
   };
 
   const handleBlockColor = (blockId: string, color: string) => {
@@ -166,13 +184,17 @@ export const GameBoard: React.FC = () => {
     const allColored = currentBlocks.every(block => block.color !== null);
     if (allColored) {
       const uniqueColors = new Set(currentBlocks.map(block => block.color).filter(Boolean));
-      setColorsUsed(uniqueColors.size);
+      const usedColors = uniqueColors.size;
+      setColorsUsed(usedColors);
       setGameCompleted(true);
       
-      const efficiency = minimumColors === uniqueColors.size ? "Perfect!" : "Good job!";
+      const scoreData = calculateScore(difficulty, minimumColors, usedColors, level);
+      setScore(scoreData);
+      setTotalScore(prev => prev + scoreData.totalScore);
+      
       toast({
-        title: "Puzzle Completed! 🎉",
-        description: `${efficiency} You used ${uniqueColors.size} colors (minimum: ${minimumColors})`,
+        title: `Puzzle Completed! Grade: ${scoreData.grade} 🎉`,
+        description: `Score: ${scoreData.totalScore} points (${usedColors} colors used, minimum: ${minimumColors})`,
       });
     }
   };
@@ -181,7 +203,8 @@ export const GameBoard: React.FC = () => {
     setGameCompleted(false);
     setColorsUsed(0);
     setSelectedColor(null);
-    generateRandomBlocks(6 + level * 2);
+    setScore(null);
+    generateRandomBlocks(difficulty, level);
   };
 
   const nextLevel = () => {
@@ -190,14 +213,28 @@ export const GameBoard: React.FC = () => {
   };
 
   const showHint = () => {
+    // Find the block with most connections for hint
+    const blockWithMostConnections = blocks.reduce((max, block) => 
+      block.adjacentBlocks.length > max.adjacentBlocks.length ? block : max
+    );
+    
     toast({
       title: "Hint 💡",
-      description: `Try to use exactly ${minimumColors} colors. Start with blocks that have the most neighbors!`,
+      description: `Try coloring block ${blockWithMostConnections.id.split('-')[1]} first - it has ${blockWithMostConnections.adjacentBlocks.length} connections!`,
     });
   };
 
+  const changeDifficulty = (newDifficulty: Difficulty) => {
+    setDifficulty(newDifficulty);
+    setLevel(1);
+    setTotalScore(0);
+    setGameCompleted(false);
+    setScore(null);
+    generateRandomBlocks(newDifficulty, 1);
+  };
+
   useEffect(() => {
-    generateRandomBlocks(8);
+    generateRandomBlocks(difficulty, level);
   }, []);
 
   return (
@@ -206,21 +243,31 @@ export const GameBoard: React.FC = () => {
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Color Block Maze Solver</h1>
           <p className="text-gray-600">Color all blocks using the minimum number of colors. Adjacent blocks cannot share the same color!</p>
+          {totalScore > 0 && (
+            <div className="mt-2">
+              <span className="text-lg font-semibold text-purple-600">Total Score: {totalScore}</span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Game Stats */}
-          <div className="lg:col-span-1">
-            <Card className="p-4 mb-4">
+          <div className="lg:col-span-1 space-y-4">
+            <DifficultySelector 
+              selectedDifficulty={difficulty}
+              onDifficultyChange={changeDifficulty}
+            />
+            
+            <Card className="p-4">
               <GameStats 
                 level={level}
                 minimumColors={minimumColors}
                 colorsUsed={colorsUsed}
                 gameCompleted={gameCompleted}
+                score={score}
               />
             </Card>
             
-            <Card className="p-4 mb-4">
+            <Card className="p-4">
               <h3 className="font-semibold mb-3">Color Palette</h3>
               <ColorPalette
                 colors={AVAILABLE_COLORS}
@@ -247,16 +294,14 @@ export const GameBoard: React.FC = () => {
             </div>
           </div>
 
-          {/* Game Board */}
           <div className="lg:col-span-3">
             <Card className="p-6">
               <div className="relative bg-white rounded-lg border-2 border-gray-200 overflow-hidden" style={{ height: '500px' }}>
                 <svg width="100%" height="100%" className="absolute inset-0">
-                  {/* Draw connection lines */}
                   {blocks.map(block => 
                     block.adjacentBlocks.map(adjId => {
                       const adjBlock = blocks.find(b => b.id === adjId);
-                      if (adjBlock && block.id < adjId) { // Avoid duplicate lines
+                      if (adjBlock && block.id < adjId) {
                         return (
                           <line
                             key={`${block.id}-${adjId}`}
@@ -274,7 +319,6 @@ export const GameBoard: React.FC = () => {
                     })
                   )}
                   
-                  {/* Render blocks */}
                   {blocks.map(block => (
                     <Block
                       key={block.id}
