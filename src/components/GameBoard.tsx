@@ -43,7 +43,6 @@ export const GameBoard: React.FC = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
 
-  // Timer effect
   useEffect(() => {
     if (gameStarted && !gameCompleted && !gameEnded && timeLeft > 0) {
       const timer = setInterval(() => {
@@ -71,19 +70,16 @@ export const GameBoard: React.FC = () => {
     
     const newRegions = generateLargeComplexShape(boardWidth, boardHeight, difficulty);
     
-    // Calculate minimum colors using Welsh-Powell algorithm
     const minColors = calculateMinimumColorsWelshPowell(newRegions);
     const config = getDifficultyConfig(difficulty, level);
     setMinimumColors(Math.max(config.minColors, minColors));
     setRegions(newRegions);
     
-    // Set starting score based on number of regions
     const startingScore = Math.floor(100 / newRegions.length) * newRegions.length;
     setCurrentScore(startingScore);
   };
 
   const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
-    // Sort regions by degree (number of adjacent regions) in descending order
     const sortedRegions = [...regions].sort((a, b) => b.adjacentRegions.length - a.adjacentRegions.length);
     const colorMap = new Map<string, number>();
     let maxColor = 0;
@@ -91,14 +87,12 @@ export const GameBoard: React.FC = () => {
     sortedRegions.forEach(region => {
       const usedColors = new Set<number>();
       
-      // Find colors used by adjacent regions
       region.adjacentRegions.forEach(adjId => {
         if (colorMap.has(adjId)) {
           usedColors.add(colorMap.get(adjId)!);
         }
       });
 
-      // Find the smallest available color
       let color = 1;
       while (usedColors.has(color)) {
         color++;
@@ -111,33 +105,18 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
-  // Check if two regions share a border - CORRECTED LOGIC
   const doRegionsShareBorder = (region1: Region, region2: Region): boolean => {
-    const tolerance = 5; // Increased tolerance for better detection
+    const tolerance = 8;
     
-    // Check if any vertex of region1 is very close to any edge of region2
-    for (const vertex1 of region1.vertices) {
-      for (let i = 0; i < region2.vertices.length; i++) {
-        const edge2Start = region2.vertices[i];
-        const edge2End = region2.vertices[(i + 1) % region2.vertices.length];
+    for (let i = 0; i < region1.vertices.length; i++) {
+      const edge1Start = region1.vertices[i];
+      const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
+      
+      for (let j = 0; j < region2.vertices.length; j++) {
+        const edge2Start = region2.vertices[j];
+        const edge2End = region2.vertices[(j + 1) % region2.vertices.length];
         
-        // Check distance from vertex1 to the edge of region2
-        const distanceToEdge = distancePointToLineSegment(vertex1, edge2Start, edge2End);
-        if (distanceToEdge < tolerance) {
-          return true;
-        }
-      }
-    }
-    
-    // Check if any vertex of region2 is very close to any edge of region1
-    for (const vertex2 of region2.vertices) {
-      for (let i = 0; i < region1.vertices.length; i++) {
-        const edge1Start = region1.vertices[i];
-        const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
-        
-        // Check distance from vertex2 to the edge of region1
-        const distanceToEdge = distancePointToLineSegment(vertex2, edge1Start, edge1End);
-        if (distanceToEdge < tolerance) {
+        if (doEdgesOverlap(edge1Start, edge1End, edge2Start, edge2End, tolerance)) {
           return true;
         }
       }
@@ -146,7 +125,58 @@ export const GameBoard: React.FC = () => {
     return false;
   };
 
-  // Calculate distance from a point to a line segment
+  const doEdgesOverlap = (
+    line1Start: { x: number; y: number },
+    line1End: { x: number; y: number },
+    line2Start: { x: number; y: number },
+    line2End: { x: number; y: number },
+    tolerance: number
+  ): boolean => {
+    if (distancePointToLineSegment(line1Start, line2Start, line2End) < tolerance ||
+        distancePointToLineSegment(line1End, line2Start, line2End) < tolerance) {
+      return true;
+    }
+    
+    if (distancePointToLineSegment(line2Start, line1Start, line1End) < tolerance ||
+        distancePointToLineSegment(line2End, line1Start, line1End) < tolerance) {
+      return true;
+    }
+    
+    return doLinesIntersect(line1Start, line1End, line2Start, line2End);
+  };
+
+  const doLinesIntersect = (
+    p1: { x: number; y: number },
+    q1: { x: number; y: number },
+    p2: { x: number; y: number },
+    q2: { x: number; y: number }
+  ): boolean => {
+    const orientation = (p: { x: number; y: number }, q: { x: number; y: number }, r: { x: number; y: number }) => {
+      const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      if (val === 0) return 0;
+      return val > 0 ? 1 : 2;
+    };
+
+    const onSegment = (p: { x: number; y: number }, q: { x: number; y: number }, r: { x: number; y: number }) => {
+      return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+             q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+    };
+
+    const o1 = orientation(p1, q1, p2);
+    const o2 = orientation(p1, q1, q2);
+    const o3 = orientation(p2, q2, p1);
+    const o4 = orientation(p2, q2, q1);
+
+    if (o1 !== o2 && o3 !== o4) return true;
+
+    if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+    if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+    if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+    if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+
+    return false;
+  };
+
   const distancePointToLineSegment = (point: { x: number; y: number }, lineStart: { x: number; y: number }, lineEnd: { x: number; y: number }): number => {
     const A = point.x - lineStart.x;
     const B = point.y - lineStart.y;
@@ -157,7 +187,6 @@ export const GameBoard: React.FC = () => {
     const lenSq = C * C + D * D;
     
     if (lenSq === 0) {
-      // Line segment is a point
       return Math.sqrt(A * A + B * B);
     }
     
@@ -182,22 +211,19 @@ export const GameBoard: React.FC = () => {
     return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Check if placing a color creates any conflicts
   const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
     const currentRegion = allRegions.find(r => r.id === regionId);
     if (!currentRegion) return false;
     
-    // Find all regions with the same color (excluding the current region)
     const sameColorRegions = allRegions.filter(r => r.color === color && r.id !== regionId);
     
-    // Check if the current region shares a border with any region of the same color
     for (const sameColorRegion of sameColorRegions) {
       if (doRegionsShareBorder(currentRegion, sameColorRegion)) {
-        return true; // Conflict found - regions share a border
+        return true;
       }
     }
     
-    return false; // No conflicts with regions sharing borders
+    return false;
   };
 
   const handleRegionColor = (regionId: string) => {
@@ -230,9 +256,7 @@ export const GameBoard: React.FC = () => {
       return region;
     });
 
-    // Check for conflicts using the new border-checking logic
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
-      // Deduct 5 points for invalid move
       setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
         title: "Invalid move! (-5 points)",
@@ -282,16 +306,14 @@ export const GameBoard: React.FC = () => {
     setGameStarted(false);
     setGameEnded(false);
     setTimeLeft(getTimeLimit(difficulty));
-    // Reset all regions to uncolored
     const resetRegions = regions.map(region => ({ ...region, color: null }));
     setRegions(resetRegions);
     setSelectedColor(null);
-    // Reset score based on number of regions
     const startingScore = Math.floor(100 / regions.length) * regions.length;
     setCurrentScore(startingScore);
     
     toast({
-      title: "Game Reset 😢",
+      title: "Game Reset",
       description: "Timer and progress reset. Try again!",
     });
   };
@@ -302,7 +324,6 @@ export const GameBoard: React.FC = () => {
   };
 
   const showHint = () => {
-    // Find the region with most connections for hint
     const regionWithMostConnections = regions.reduce((max, region) => 
       region.adjacentRegions.length > max.adjacentRegions.length ? region : max
     );
