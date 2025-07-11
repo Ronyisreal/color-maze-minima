@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
@@ -5,7 +6,7 @@ import { GameStats } from './GameStats';
 import { DifficultySelector, Difficulty } from './DifficultySelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { RefreshCw, Lightbulb, Trophy, Timer } from 'lucide-react';
+import { RefreshCw, Lightbulb, Trophy, Timer, Frown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateLargeComplexShape, getDifficultyConfig, Region } from '@/utils/shapeGenerator';
 import { calculateScore, ScoreData } from '@/utils/scoreCalculator';
@@ -76,6 +77,10 @@ export const GameBoard: React.FC = () => {
     const config = getDifficultyConfig(difficulty, level);
     setMinimumColors(Math.max(config.minColors, minColors));
     setRegions(newRegions);
+    
+    // Set starting score based on number of regions
+    const startingScore = Math.floor(100 / newRegions.length) * newRegions.length;
+    setCurrentScore(startingScore);
   };
 
   const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
@@ -107,27 +112,25 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
-  // New adjacency checking logic - any connection path between same colors is invalid
-  const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
+  // Check if two regions are connected through any path
+  const areRegionsConnected = (regionId1: string, regionId2: string, allRegions: Region[]): boolean => {
+    if (regionId1 === regionId2) return false;
+    
     const visited = new Set<string>();
-    const queue: string[] = [regionId];
+    const queue: string[] = [regionId1];
     
     while (queue.length > 0) {
       const currentId = queue.shift()!;
       if (visited.has(currentId)) continue;
       visited.add(currentId);
       
+      if (currentId === regionId2) return true;
+      
       const currentRegion = allRegions.find(r => r.id === currentId);
       if (!currentRegion) continue;
       
-      // Check all adjacent regions
+      // Add all adjacent regions to queue
       for (const adjId of currentRegion.adjacentRegions) {
-        const adjRegion = allRegions.find(r => r.id === adjId);
-        if (adjRegion && adjRegion.color === color && adjId !== regionId) {
-          return true; // Found a conflict - same color is connected
-        }
-        
-        // Continue traversal through connected regions
         if (!visited.has(adjId)) {
           queue.push(adjId);
         }
@@ -135,6 +138,21 @@ export const GameBoard: React.FC = () => {
     }
     
     return false;
+  };
+
+  // Check if placing a color creates any conflicts
+  const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
+    // Find all regions with the same color
+    const sameColorRegions = allRegions.filter(r => r.color === color && r.id !== regionId);
+    
+    // Check if the current region is connected to any region with the same color
+    for (const sameColorRegion of sameColorRegions) {
+      if (areRegionsConnected(regionId, sameColorRegion.id, allRegions)) {
+        return true; // Conflict found
+      }
+    }
+    
+    return false; // No conflicts
   };
 
   const handleRegionColor = (regionId: string) => {
@@ -169,10 +187,10 @@ export const GameBoard: React.FC = () => {
 
     // Check for conflicts using the new logic
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
-      // Deduct 10 points for invalid move
-      setCurrentScore(prev => Math.max(0, prev - 10));
+      // Deduct 5 points for invalid move
+      setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
-        title: "Invalid move! (-10 points)",
+        title: "Invalid move! (-5 points)",
         description: "This color is connected to another region with the same color.",
         variant: "destructive",
       });
@@ -211,9 +229,26 @@ export const GameBoard: React.FC = () => {
     setColorsUsed(0);
     setSelectedColor(null);
     setScore(null);
-    setCurrentScore(100);
     setTimeLeft(getTimeLimit(difficulty));
     generateNewPuzzle(difficulty, level);
+  };
+
+  const bailOut = () => {
+    setGameStarted(false);
+    setGameEnded(false);
+    setTimeLeft(getTimeLimit(difficulty));
+    // Reset all regions to uncolored
+    const resetRegions = regions.map(region => ({ ...region, color: null }));
+    setRegions(resetRegions);
+    setSelectedColor(null);
+    // Reset score based on number of regions
+    const startingScore = Math.floor(100 / regions.length) * regions.length;
+    setCurrentScore(startingScore);
+    
+    toast({
+      title: "Game Reset 😢",
+      description: "Timer and progress reset. Try again!",
+    });
   };
 
   const nextLevel = () => {
@@ -241,7 +276,6 @@ export const GameBoard: React.FC = () => {
     setGameEnded(false);
     setGameStarted(false);
     setScore(null);
-    setCurrentScore(100);
     setTimeLeft(getTimeLimit(newDifficulty));
     generateNewPuzzle(newDifficulty, 1);
   };
@@ -312,6 +346,10 @@ export const GameBoard: React.FC = () => {
               <Button onClick={showHint} className="w-full" variant="outline" disabled={gameEnded}>
                 <Lightbulb className="w-4 h-4 mr-2" />
                 Hint
+              </Button>
+              <Button onClick={bailOut} className="w-full" variant="outline" disabled={gameEnded || !gameStarted}>
+                <Frown className="w-4 h-4 mr-2" />
+                I bail 😢
               </Button>
               {gameCompleted && (
                 <Button onClick={nextLevel} className="w-full">
