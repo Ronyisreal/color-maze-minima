@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
@@ -302,12 +301,26 @@ export const GameBoard: React.FC = () => {
             )}
             <div className="flex items-center gap-2">
               <Timer className="w-5 h-5 text-blue-600" />
-              <span className={`text-lg font-bold ${timeLeft <= 10 ? 'text-red-600' : 'text-blue-600'}`}>
+              <span className={`text-lg font-bold transition-colors duration-300 ${
+                timeLeft <= 30 ? 'text-red-600 animate-pulse' : 
+                timeLeft <= 60 ? 'text-orange-600' : 
+                'text-blue-600'
+              }`}>
                 {formatTime(timeLeft)}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <span className="text-lg font-semibold text-green-600">Current Score: {currentScore}</span>
+              <Button 
+                onClick={bailOut} 
+                size="sm" 
+                variant="outline" 
+                disabled={gameEnded || !gameStarted}
+                className="text-sm"
+              >
+                <Frown className="w-4 h-4 mr-1" />
+                I bail 😢
+              </Button>
             </div>
           </div>
         </div>
@@ -346,10 +359,6 @@ export const GameBoard: React.FC = () => {
               <Button onClick={showHint} className="w-full" variant="outline" disabled={gameEnded}>
                 <Lightbulb className="w-4 h-4 mr-2" />
                 Hint
-              </Button>
-              <Button onClick={bailOut} className="w-full" variant="outline" disabled={gameEnded || !gameStarted}>
-                <Frown className="w-4 h-4 mr-2" />
-                I bail 😢
               </Button>
               {gameCompleted && (
                 <Button onClick={nextLevel} className="w-full">
