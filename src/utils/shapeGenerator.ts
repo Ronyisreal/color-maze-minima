@@ -142,42 +142,43 @@ const findAdjacencies = (regions: Region[]): void => {
 
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
   const config = getDifficultyConfig(difficulty, 1);
-  const margin = 100; // Margin to keep shapes away from edges
+  const margin = 50;
   
-  // Create a central tangled formation
+  // Create a compact, brain-like formation in the center
   const centerX = width / 2;
   const centerY = height / 2;
-  const formationRadius = Math.min(width, height) * 0.2; // Compact formation
+  const formationRadius = Math.min(width, height) * 0.15; // Much smaller, more compact
   
-  // Generate seeds in a dense, overlapping pattern for tangled effect
+  // Generate seeds in a dense, brain-like pattern
   const seeds: Point[] = [];
   
-  // Add center seed
-  seeds.push({ x: centerX, y: centerY });
+  // Create multiple concentric layers for brain-like complexity
+  const layers = 3;
+  const seedsPerLayer = Math.ceil(config.numRegions / layers);
   
-  // Create multiple overlapping clusters to achieve tangled effect
-  const numClusters = Math.ceil(config.numRegions / 4);
-  
-  for (let cluster = 0; cluster < numClusters && seeds.length < config.numRegions; cluster++) {
-    // Each cluster has a slightly offset center
-    const clusterAngle = (2 * Math.PI * cluster) / numClusters;
-    const clusterOffset = formationRadius * 0.3;
-    const clusterCenterX = centerX + Math.cos(clusterAngle) * clusterOffset;
-    const clusterCenterY = centerY + Math.sin(clusterAngle) * clusterOffset;
+  for (let layer = 0; layer < layers && seeds.length < config.numRegions; layer++) {
+    const layerRadius = formationRadius * (0.3 + layer * 0.35); // Varying layer distances
+    const numSeeds = Math.min(seedsPerLayer, config.numRegions - seeds.length);
     
-    // Generate seeds around each cluster center
-    const seedsPerCluster = Math.min(5, config.numRegions - seeds.length);
-    
-    for (let i = 0; i < seedsPerCluster; i++) {
-      const angle = (2 * Math.PI * i) / seedsPerCluster + cluster * 0.5; // Add rotation offset
-      const radius = formationRadius * (0.3 + Math.random() * 0.4); // Varying distances
+    for (let i = 0; i < numSeeds; i++) {
+      // Create irregular angular distribution for organic look
+      const baseAngle = (2 * Math.PI * i) / numSeeds;
+      const angleVariation = (Math.random() - 0.5) * 0.8; // Random angle variation
+      const angle = baseAngle + angleVariation;
       
-      // High jitter for irregular, tangled shapes
-      const jitter = formationRadius * 0.4 * config.complexity;
-      const x = clusterCenterX + Math.cos(angle) * radius + (Math.random() - 0.5) * jitter;
-      const y = clusterCenterY + Math.sin(angle) * radius + (Math.random() - 0.5) * jitter;
+      // Variable radius within the layer for organic shape
+      const radiusVariation = (Math.random() - 0.5) * layerRadius * 0.4;
+      const radius = layerRadius + radiusVariation;
       
-      // Ensure seeds stay within bounds
+      // Add organic jitter for brain-like irregularity
+      const jitterAmount = formationRadius * 0.2;
+      const jitterX = (Math.random() - 0.5) * jitterAmount;
+      const jitterY = (Math.random() - 0.5) * jitterAmount;
+      
+      const x = centerX + Math.cos(angle) * radius + jitterX;
+      const y = centerY + Math.sin(angle) * radius + jitterY;
+      
+      // Ensure seeds stay within reasonable bounds but allow some organic spread
       const clampedX = Math.max(margin, Math.min(width - margin, x));
       const clampedY = Math.max(margin, Math.min(height - margin, y));
       
@@ -185,27 +186,30 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     }
   }
   
-  // Fill remaining seeds with random placement in the formation area
-  while (seeds.length < config.numRegions) {
+  // Add a few random seeds in the core for extra complexity
+  const coreSeeds = Math.min(3, config.numRegions - seeds.length);
+  for (let i = 0; i < coreSeeds; i++) {
+    const coreRadius = formationRadius * 0.2;
     const angle = Math.random() * 2 * Math.PI;
-    const radius = Math.random() * formationRadius;
-    const jitter = formationRadius * 0.3;
+    const radius = Math.random() * coreRadius;
     
-    const x = centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * jitter;
-    const y = centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * jitter;
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
     
-    const clampedX = Math.max(margin, Math.min(width - margin, x));
-    const clampedY = Math.max(margin, Math.min(height - margin, y));
-    
-    seeds.push({ x: clampedX, y: clampedY });
+    seeds.push({ x, y });
   }
   
-  // Generate Voronoi cells with tighter bounds for more tangled effect
+  // Generate Voronoi cells with compact bounds
   const regions: Region[] = [];
+  const compactBounds = {
+    width: centerX + formationRadius * 1.5,
+    height: centerY + formationRadius * 1.5,
+    margin: centerX - formationRadius * 1.5
+  };
   
   for (let i = 0; i < seeds.length; i++) {
     const seed = seeds[i];
-    const vertices = generateVoronoiCell(seed, seeds, { width, height, margin: margin * 0.5 });
+    const vertices = generateVoronoiCell(seed, seeds, compactBounds);
     const center = calculateCentroid(vertices);
     
     regions.push({
@@ -217,10 +221,10 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     });
   }
   
-  // Find adjacencies with increased tolerance for more connections (tangled effect)
-  findAdjacenciesWithTolerance(regions, 20);
+  // Find adjacencies with moderate tolerance for brain-like connectivity
+  findAdjacenciesWithTolerance(regions, 25);
   
-  // Ensure all regions are connected by adding connections to isolated regions
+  // Ensure connectivity by connecting isolated regions
   const isolated = regions.filter(r => r.adjacentRegions.length === 0);
   isolated.forEach(region => {
     const closest = regions
