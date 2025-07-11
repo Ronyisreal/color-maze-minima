@@ -142,12 +142,12 @@ const findAdjacencies = (regions: Region[]): void => {
 
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
   const config = getDifficultyConfig(difficulty, 1);
-  const margin = 80; // Increased margin to prevent clipping
+  const margin = 80; // Keep margin to prevent clipping
   
-  // Create a more compact central area for seed placement to ensure centering
+  // Create a more compact central area for seed placement
   const centerX = width / 2;
   const centerY = height / 2;
-  const maxRadius = Math.min(width - 2 * margin, height - 2 * margin) * 0.35; // Account for margins
+  const maxRadius = Math.min(width, height) * 0.25; // Reduced to 25% for more compact formation
   
   // Generate seeds in a more controlled pattern around the center
   const seeds: Point[] = [];
@@ -168,8 +168,8 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     
     for (let i = 0; i < seedsInCircle && seeds.length < config.numRegions; i++) {
       const angle = (2 * Math.PI * i) / seedsInCircle;
-      // Add some randomness while keeping it centered
-      const jitter = radius * 0.3 * config.complexity;
+      // Reduce jitter to keep shapes more compact
+      const jitter = radius * 0.2 * config.complexity;
       const x = centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * jitter;
       const y = centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * jitter;
       
