@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
@@ -5,7 +6,7 @@ import { GameStats } from './GameStats';
 import { DifficultySelector, Difficulty } from './DifficultySelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { RefreshCw, Lightbulb, Trophy } from 'lucide-react';
+import { RefreshCw, Lightbulb, Trophy, Timer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateLargeComplexShape, getDifficultyConfig, Region } from '@/utils/shapeGenerator';
 import { calculateScore, ScoreData } from '@/utils/scoreCalculator';
@@ -19,6 +20,8 @@ const AVAILABLE_COLORS = [
   { name: 'Orange', value: '#f97316', hex: '#f97316' },
 ];
 
+const GAME_TIME_LIMIT = 60; // 1 minute for all difficulty levels
+
 export const GameBoard: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -29,6 +32,32 @@ export const GameBoard: React.FC = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [score, setScore] = useState<ScoreData | null>(null);
   const [totalScore, setTotalScore] = useState(0);
+  const [currentScore, setCurrentScore] = useState(100); // Starting score of 100
+  const [timeLeft, setTimeLeft] = useState(GAME_TIME_LIMIT);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [gameEnded, setGameEnded] = useState(false);
+
+  // Timer effect
+  useEffect(() => {
+    if (gameStarted && !gameCompleted && !gameEnded && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            setGameEnded(true);
+            toast({
+              title: "Time's Up! ⏰",
+              description: "Game over! Try again to beat the clock.",
+              variant: "destructive",
+            });
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [gameStarted, gameCompleted, gameEnded, timeLeft]);
 
   const generateNewPuzzle = (difficulty: Difficulty, level: number) => {
     const boardWidth = 800;
@@ -72,7 +101,46 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
+  // New adjacency checking logic - any connection path between same colors is invalid
+  const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
+    const visited = new Set<string>();
+    const queue: string[] = [regionId];
+    
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+      
+      const currentRegion = allRegions.find(r => r.id === currentId);
+      if (!currentRegion) continue;
+      
+      // Check all adjacent regions
+      for (const adjId of currentRegion.adjacentRegions) {
+        const adjRegion = allRegions.find(r => r.id === adjId);
+        if (adjRegion && adjRegion.color === color && adjId !== regionId) {
+          return true; // Found a conflict - same color is connected
+        }
+        
+        // Continue traversal through connected regions
+        if (!visited.has(adjId)) {
+          queue.push(adjId);
+        }
+      }
+    }
+    
+    return false;
+  };
+
   const handleRegionColor = (regionId: string) => {
+    if (gameEnded) {
+      toast({
+        title: "Game Over",
+        description: "Time's up! Start a new game to continue playing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!selectedColor) {
       toast({
         title: "Select a color first",
@@ -82,6 +150,10 @@ export const GameBoard: React.FC = () => {
       return;
     }
 
+    if (!gameStarted) {
+      setGameStarted(true);
+    }
+
     const updatedRegions = regions.map(region => {
       if (region.id === regionId) {
         return { ...region, color: selectedColor };
@@ -89,22 +161,16 @@ export const GameBoard: React.FC = () => {
       return region;
     });
 
-    // Check for adjacency conflicts
-    const targetRegion = updatedRegions.find(r => r.id === regionId);
-    if (targetRegion) {
-      const hasConflict = targetRegion.adjacentRegions.some(adjId => {
-        const adjRegion = updatedRegions.find(r => r.id === adjId);
-        return adjRegion && adjRegion.color === selectedColor;
+    // Check for conflicts using the new logic
+    if (isColorConflict(regionId, selectedColor, updatedRegions)) {
+      // Deduct 10 points for invalid move
+      setCurrentScore(prev => Math.max(0, prev - 10));
+      toast({
+        title: "Invalid move! (-10 points)",
+        description: "This color is connected to another region with the same color.",
+        variant: "destructive",
       });
-
-      if (hasConflict) {
-        toast({
-          title: "Invalid move!",
-          description: "Adjacent regions cannot have the same color.",
-          variant: "destructive",
-        });
-        return;
-      }
+      return;
     }
 
     setRegions(updatedRegions);
@@ -118,23 +184,29 @@ export const GameBoard: React.FC = () => {
       const usedColors = uniqueColors.size;
       setColorsUsed(usedColors);
       setGameCompleted(true);
+      setGameStarted(false);
       
       const scoreData = calculateScore(difficulty, minimumColors, usedColors, level);
-      setScore(scoreData);
-      setTotalScore(prev => prev + scoreData.totalScore);
+      const finalScore = { ...scoreData, totalScore: scoreData.totalScore + currentScore };
+      setScore(finalScore);
+      setTotalScore(prev => prev + finalScore.totalScore);
       
       toast({
         title: `Puzzle Completed! Grade: ${scoreData.grade} 🎉`,
-        description: `Score: ${scoreData.totalScore} points (${usedColors} colors used, minimum: ${minimumColors})`,
+        description: `Score: ${finalScore.totalScore} points (${usedColors} colors used, minimum: ${minimumColors})`,
       });
     }
   };
 
   const resetGame = () => {
     setGameCompleted(false);
+    setGameEnded(false);
+    setGameStarted(false);
     setColorsUsed(0);
     setSelectedColor(null);
     setScore(null);
+    setCurrentScore(100);
+    setTimeLeft(GAME_TIME_LIMIT);
     generateNewPuzzle(difficulty, level);
   };
 
@@ -160,8 +232,18 @@ export const GameBoard: React.FC = () => {
     setLevel(1);
     setTotalScore(0);
     setGameCompleted(false);
+    setGameEnded(false);
+    setGameStarted(false);
     setScore(null);
+    setCurrentScore(100);
+    setTimeLeft(GAME_TIME_LIMIT);
     generateNewPuzzle(newDifficulty, 1);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   useEffect(() => {
@@ -173,12 +255,21 @@ export const GameBoard: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Color Block Maze Solver</h1>
-          <p className="text-gray-600">Color all blocks using the minimum number of colors. Adjacent blocks cannot share the same color!</p>
-          {totalScore > 0 && (
-            <div className="mt-2">
+          <p className="text-gray-600">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
+          <div className="flex justify-center items-center gap-6 mt-4">
+            {totalScore > 0 && (
               <span className="text-lg font-semibold text-purple-600">Total Score: {totalScore}</span>
+            )}
+            <div className="flex items-center gap-2">
+              <Timer className="w-5 h-5 text-blue-600" />
+              <span className={`text-lg font-bold ${timeLeft <= 10 ? 'text-red-600' : 'text-blue-600'}`}>
+                {formatTime(timeLeft)}
+              </span>
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold text-green-600">Current Score: {currentScore}</span>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -212,7 +303,7 @@ export const GameBoard: React.FC = () => {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 New Puzzle
               </Button>
-              <Button onClick={showHint} className="w-full" variant="outline">
+              <Button onClick={showHint} className="w-full" variant="outline" disabled={gameEnded}>
                 <Lightbulb className="w-4 h-4 mr-2" />
                 Hint
               </Button>
@@ -228,6 +319,15 @@ export const GameBoard: React.FC = () => {
           <div className="lg:col-span-4">
             <Card className="p-6">
               <div className="relative bg-white rounded-lg border-2 border-gray-200 overflow-hidden" style={{ height: '700px' }}>
+                {gameEnded && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+                    <div className="bg-white p-6 rounded-lg text-center">
+                      <h2 className="text-2xl font-bold text-red-600 mb-2">Time's Up!</h2>
+                      <p className="text-gray-600 mb-4">Final Score: {currentScore}</p>
+                      <Button onClick={resetGame}>Try Again</Button>
+                    </div>
+                  </div>
+                )}
                 <svg width="100%" height="100%" className="absolute inset-0" viewBox="0 0 800 600">
                   {regions.map(region => 
                     region.adjacentRegions.map(adjId => {
@@ -260,7 +360,7 @@ export const GameBoard: React.FC = () => {
                           fill={region.color || '#ffffff'}
                           stroke={region.color ? '#374151' : '#9ca3af'}
                           strokeWidth="2"
-                          className="cursor-pointer hover:stroke-gray-800 transition-all duration-200"
+                          className={`cursor-pointer hover:stroke-gray-800 transition-all duration-200 ${gameEnded ? 'pointer-events-none' : ''}`}
                           onClick={() => handleRegionColor(region.id)}
                         />
                         <text
