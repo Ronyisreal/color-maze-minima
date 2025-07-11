@@ -111,30 +111,33 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
-  // Check if two regions share a border by comparing their edges
+  // Check if two regions share a border - CORRECTED LOGIC
   const doRegionsShareBorder = (region1: Region, region2: Region): boolean => {
-    const tolerance = 1; // Small tolerance for floating point comparison
+    const tolerance = 5; // Increased tolerance for better detection
     
-    // Get edges of both regions
-    const getEdges = (region: Region) => {
-      const edges = [];
-      const vertices = region.vertices;
-      for (let i = 0; i < vertices.length; i++) {
-        const start = vertices[i];
-        const end = vertices[(i + 1) % vertices.length];
-        edges.push({ start, end });
+    // Check if any vertex of region1 is very close to any edge of region2
+    for (const vertex1 of region1.vertices) {
+      for (let i = 0; i < region2.vertices.length; i++) {
+        const edge2Start = region2.vertices[i];
+        const edge2End = region2.vertices[(i + 1) % region2.vertices.length];
+        
+        // Check distance from vertex1 to the edge of region2
+        const distanceToEdge = distancePointToLineSegment(vertex1, edge2Start, edge2End);
+        if (distanceToEdge < tolerance) {
+          return true;
+        }
       }
-      return edges;
-    };
+    }
     
-    const edges1 = getEdges(region1);
-    const edges2 = getEdges(region2);
-    
-    // Check if any edge from region1 overlaps with any edge from region2
-    for (const edge1 of edges1) {
-      for (const edge2 of edges2) {
-        // Check if edges are collinear and overlapping
-        if (doEdgesOverlap(edge1, edge2, tolerance)) {
+    // Check if any vertex of region2 is very close to any edge of region1
+    for (const vertex2 of region2.vertices) {
+      for (let i = 0; i < region1.vertices.length; i++) {
+        const edge1Start = region1.vertices[i];
+        const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
+        
+        // Check distance from vertex2 to the edge of region1
+        const distanceToEdge = distancePointToLineSegment(vertex2, edge1Start, edge1End);
+        if (distanceToEdge < tolerance) {
           return true;
         }
       }
@@ -143,49 +146,48 @@ export const GameBoard: React.FC = () => {
     return false;
   };
 
-  // Check if two line segments overlap
-  const doEdgesOverlap = (edge1: any, edge2: any, tolerance: number): boolean => {
-    const { start: s1, end: e1 } = edge1;
-    const { start: s2, end: e2 } = edge2;
+  // Calculate distance from a point to a line segment
+  const distancePointToLineSegment = (point: { x: number; y: number }, lineStart: { x: number; y: number }, lineEnd: { x: number; y: number }): number => {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
     
-    // Check if edges are collinear
-    const crossProduct1 = (e1.x - s1.x) * (s2.y - s1.y) - (e1.y - s1.y) * (s2.x - s1.x);
-    const crossProduct2 = (e1.x - s1.x) * (e2.y - s1.y) - (e1.y - s1.y) * (e2.x - s1.x);
-    
-    if (Math.abs(crossProduct1) > tolerance || Math.abs(crossProduct2) > tolerance) {
-      return false; // Not collinear
+    if (lenSq === 0) {
+      // Line segment is a point
+      return Math.sqrt(A * A + B * B);
     }
     
-    // If collinear, check if they overlap
-    // Project onto the axis with larger difference
-    const dx1 = Math.abs(e1.x - s1.x);
-    const dy1 = Math.abs(e1.y - s1.y);
+    let param = dot / lenSq;
     
-    if (dx1 >= dy1) {
-      // Project onto x-axis
-      const min1 = Math.min(s1.x, e1.x);
-      const max1 = Math.max(s1.x, e1.x);
-      const min2 = Math.min(s2.x, e2.x);
-      const max2 = Math.max(s2.x, e2.x);
-      
-      return max1 >= min2 - tolerance && max2 >= min1 - tolerance;
+    let xx, yy;
+    
+    if (param < 0) {
+      xx = lineStart.x;
+      yy = lineStart.y;
+    } else if (param > 1) {
+      xx = lineEnd.x;
+      yy = lineEnd.y;
     } else {
-      // Project onto y-axis
-      const min1 = Math.min(s1.y, e1.y);
-      const max1 = Math.max(s1.y, e1.y);
-      const min2 = Math.min(s2.y, e2.y);
-      const max2 = Math.max(s2.y, e2.y);
-      
-      return max1 >= min2 - tolerance && max2 >= min1 - tolerance;
+      xx = lineStart.x + param * C;
+      yy = lineStart.y + param * D;
     }
+    
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+    
+    return Math.sqrt(dx * dx + dy * dy);
   };
 
-  // Check if placing a color creates any conflicts - NEW LOGIC
+  // Check if placing a color creates any conflicts
   const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
     const currentRegion = allRegions.find(r => r.id === regionId);
     if (!currentRegion) return false;
     
-    // Find all regions with the same color
+    // Find all regions with the same color (excluding the current region)
     const sameColorRegions = allRegions.filter(r => r.color === color && r.id !== regionId);
     
     // Check if the current region shares a border with any region of the same color
