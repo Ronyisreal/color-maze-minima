@@ -119,14 +119,14 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   const centerX = width / 2;
   const centerY = height / 2;
   
-  // Increase the formation area to make the figure larger (25% increase)
-  const formationRadius = Math.min(width, height) * 0.44; // Increased from 0.35 (25% increase)
+  // Increase the formation area to make the figure larger (50% increase)
+  const formationRadius = Math.min(width, height) * 0.66; // Increased from 0.44 (50% increase)
   
-  // Increase base sizes for larger regions (25% increase)
+  // Increase base sizes for larger regions (50% increase)
   const sizeFactor = {
-    easy: { base: 81, variation: 0.3, overlap: 0.8 }, // Increased from 65 (25% increase)
-    medium: { base: 62, variation: 0.4, overlap: 0.7 }, // Increased from 50 (25% increase)
-    hard: { base: 50, variation: 0.5, overlap: 0.6 } // Increased from 40 (25% increase)
+    easy: { base: 122, variation: 0.3, overlap: 0.8 }, // Increased from 81 (50% increase)
+    medium: { base: 93, variation: 0.4, overlap: 0.7 }, // Increased from 62 (50% increase)
+    hard: { base: 75, variation: 0.5, overlap: 0.6 } // Increased from 50 (50% increase)
   }[difficulty];
   
   const regions: Region[] = [];
@@ -148,9 +148,9 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
       targetY = existingRegion.center.y + Math.sin(clusterAngle) * clusterDistance;
     }
     
-    // Adjust bounds for larger figure (25% increase in margin)
-    targetX = Math.max(150, Math.min(width - 150, targetX)); // Increased from 120
-    targetY = Math.max(150, Math.min(height - 150, targetY)); // Increased from 120
+    // Adjust bounds for larger figure (50% increase in margin)
+    targetX = Math.max(225, Math.min(width - 225, targetX)); // Increased from 150 (50% increase)
+    targetY = Math.max(225, Math.min(height - 225, targetY)); // Increased from 150 (50% increase)
     
     const center = { x: targetX, y: targetY };
     const baseSize = sizeFactor.base * (1 + (Math.random() - 0.5) * sizeFactor.variation);
@@ -179,9 +179,9 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   }
   
   const adjacencyTolerance = {
-    easy: 38, // Increased tolerance for larger shapes (25% increase from 30)
-    medium: 44, // Increased from 35
-    hard: 50 // Increased from 40
+    easy: 57, // Increased tolerance for larger shapes (50% increase from 38)
+    medium: 66, // Increased from 44 (50% increase)
+    hard: 75 // Increased from 50 (50% increase)
   }[difficulty];
   
   findAdjacencies(regions, adjacencyTolerance);
