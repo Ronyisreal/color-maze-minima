@@ -119,14 +119,14 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   const centerX = width / 2;
   const centerY = height / 2;
   
-  // Increase the formation area to make the figure larger
-  const formationRadius = Math.min(width, height) * 0.35; // Increased from 0.25
+  // Increase the formation area to make the figure larger (25% increase)
+  const formationRadius = Math.min(width, height) * 0.44; // Increased from 0.35 (25% increase)
   
-  // Increase base sizes for larger regions
+  // Increase base sizes for larger regions (25% increase)
   const sizeFactor = {
-    easy: { base: 65, variation: 0.3, overlap: 0.8 }, // Increased from 45
-    medium: { base: 50, variation: 0.4, overlap: 0.7 }, // Increased from 35
-    hard: { base: 40, variation: 0.5, overlap: 0.6 } // Increased from 25
+    easy: { base: 81, variation: 0.3, overlap: 0.8 }, // Increased from 65 (25% increase)
+    medium: { base: 62, variation: 0.4, overlap: 0.7 }, // Increased from 50 (25% increase)
+    hard: { base: 50, variation: 0.5, overlap: 0.6 } // Increased from 40 (25% increase)
   }[difficulty];
   
   const regions: Region[] = [];
@@ -148,9 +148,9 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
       targetY = existingRegion.center.y + Math.sin(clusterAngle) * clusterDistance;
     }
     
-    // Adjust bounds for larger figure
-    targetX = Math.max(120, Math.min(width - 120, targetX));
-    targetY = Math.max(120, Math.min(height - 120, targetY));
+    // Adjust bounds for larger figure (25% increase in margin)
+    targetX = Math.max(150, Math.min(width - 150, targetX)); // Increased from 120
+    targetY = Math.max(150, Math.min(height - 150, targetY)); // Increased from 120
     
     const center = { x: targetX, y: targetY };
     const baseSize = sizeFactor.base * (1 + (Math.random() - 0.5) * sizeFactor.variation);
@@ -179,9 +179,9 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   }
   
   const adjacencyTolerance = {
-    easy: 30, // Increased tolerance for larger shapes
-    medium: 35,
-    hard: 40
+    easy: 38, // Increased tolerance for larger shapes (25% increase from 30)
+    medium: 44, // Increased from 35
+    hard: 50 // Increased from 40
   }[difficulty];
   
   findAdjacencies(regions, adjacencyTolerance);
