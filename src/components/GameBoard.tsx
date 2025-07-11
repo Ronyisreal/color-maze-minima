@@ -111,20 +111,91 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
-  // Check if placing a color creates any conflicts - FIXED LOGIC
+  // Check if two regions share a border by comparing their edges
+  const doRegionsShareBorder = (region1: Region, region2: Region): boolean => {
+    const tolerance = 1; // Small tolerance for floating point comparison
+    
+    // Get edges of both regions
+    const getEdges = (region: Region) => {
+      const edges = [];
+      const vertices = region.vertices;
+      for (let i = 0; i < vertices.length; i++) {
+        const start = vertices[i];
+        const end = vertices[(i + 1) % vertices.length];
+        edges.push({ start, end });
+      }
+      return edges;
+    };
+    
+    const edges1 = getEdges(region1);
+    const edges2 = getEdges(region2);
+    
+    // Check if any edge from region1 overlaps with any edge from region2
+    for (const edge1 of edges1) {
+      for (const edge2 of edges2) {
+        // Check if edges are collinear and overlapping
+        if (doEdgesOverlap(edge1, edge2, tolerance)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
+
+  // Check if two line segments overlap
+  const doEdgesOverlap = (edge1: any, edge2: any, tolerance: number): boolean => {
+    const { start: s1, end: e1 } = edge1;
+    const { start: s2, end: e2 } = edge2;
+    
+    // Check if edges are collinear
+    const crossProduct1 = (e1.x - s1.x) * (s2.y - s1.y) - (e1.y - s1.y) * (s2.x - s1.x);
+    const crossProduct2 = (e1.x - s1.x) * (e2.y - s1.y) - (e1.y - s1.y) * (e2.x - s1.x);
+    
+    if (Math.abs(crossProduct1) > tolerance || Math.abs(crossProduct2) > tolerance) {
+      return false; // Not collinear
+    }
+    
+    // If collinear, check if they overlap
+    // Project onto the axis with larger difference
+    const dx1 = Math.abs(e1.x - s1.x);
+    const dy1 = Math.abs(e1.y - s1.y);
+    
+    if (dx1 >= dy1) {
+      // Project onto x-axis
+      const min1 = Math.min(s1.x, e1.x);
+      const max1 = Math.max(s1.x, e1.x);
+      const min2 = Math.min(s2.x, e2.x);
+      const max2 = Math.max(s2.x, e2.x);
+      
+      return max1 >= min2 - tolerance && max2 >= min1 - tolerance;
+    } else {
+      // Project onto y-axis
+      const min1 = Math.min(s1.y, e1.y);
+      const max1 = Math.max(s1.y, e1.y);
+      const min2 = Math.min(s2.y, e2.y);
+      const max2 = Math.max(s2.y, e2.y);
+      
+      return max1 >= min2 - tolerance && max2 >= min1 - tolerance;
+    }
+  };
+
+  // Check if placing a color creates any conflicts - NEW LOGIC
   const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
     const currentRegion = allRegions.find(r => r.id === regionId);
     if (!currentRegion) return false;
     
-    // Check if any directly adjacent region has the same color
-    for (const adjacentId of currentRegion.adjacentRegions) {
-      const adjacentRegion = allRegions.find(r => r.id === adjacentId);
-      if (adjacentRegion && adjacentRegion.color === color) {
-        return true; // Conflict found - directly adjacent region has same color
+    // Find all regions with the same color
+    const sameColorRegions = allRegions.filter(r => r.color === color && r.id !== regionId);
+    
+    // Check if the current region shares a border with any region of the same color
+    for (const sameColorRegion of sameColorRegions) {
+      if (doRegionsShareBorder(currentRegion, sameColorRegion)) {
+        return true; // Conflict found - regions share a border
       }
     }
     
-    return false; // No conflicts with directly adjacent regions
+    return false; // No conflicts with regions sharing borders
   };
 
   const handleRegionColor = (regionId: string) => {
@@ -157,13 +228,13 @@ export const GameBoard: React.FC = () => {
       return region;
     });
 
-    // Check for conflicts using the fixed logic
+    // Check for conflicts using the new border-checking logic
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
       // Deduct 5 points for invalid move
       setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
         title: "Invalid move! (-5 points)",
-        description: "This color is directly adjacent to another region with the same color.",
+        description: "This color shares a border with another region of the same color.",
         variant: "destructive",
       });
       return;
