@@ -142,38 +142,42 @@ const findAdjacencies = (regions: Region[]): void => {
 
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
   const config = getDifficultyConfig(difficulty, 1);
-  const margin = 80; // Keep margin to prevent clipping
+  const margin = 100; // Margin to keep shapes away from edges
   
-  // Create a more compact central area for seed placement
+  // Create a central tangled formation
   const centerX = width / 2;
   const centerY = height / 2;
-  const maxRadius = Math.min(width, height) * 0.25; // Reduced to 25% for more compact formation
+  const formationRadius = Math.min(width, height) * 0.2; // Compact formation
   
-  // Generate seeds in a more controlled pattern around the center
+  // Generate seeds in a dense, overlapping pattern for tangled effect
   const seeds: Point[] = [];
   
   // Add center seed
   seeds.push({ x: centerX, y: centerY });
   
-  // Add seeds in concentric circles around the center
-  const numCircles = Math.ceil(Math.sqrt(config.numRegions));
-  const remainingSeeds = config.numRegions - 1;
+  // Create multiple overlapping clusters to achieve tangled effect
+  const numClusters = Math.ceil(config.numRegions / 4);
   
-  for (let circle = 1; circle <= numCircles && seeds.length < config.numRegions; circle++) {
-    const radius = (maxRadius / numCircles) * circle;
-    const seedsInCircle = Math.min(
-      remainingSeeds - (seeds.length - 1),
-      Math.max(4, Math.floor(circle * 2.5))
-    );
+  for (let cluster = 0; cluster < numClusters && seeds.length < config.numRegions; cluster++) {
+    // Each cluster has a slightly offset center
+    const clusterAngle = (2 * Math.PI * cluster) / numClusters;
+    const clusterOffset = formationRadius * 0.3;
+    const clusterCenterX = centerX + Math.cos(clusterAngle) * clusterOffset;
+    const clusterCenterY = centerY + Math.sin(clusterAngle) * clusterOffset;
     
-    for (let i = 0; i < seedsInCircle && seeds.length < config.numRegions; i++) {
-      const angle = (2 * Math.PI * i) / seedsInCircle;
-      // Reduce jitter to keep shapes more compact
-      const jitter = radius * 0.2 * config.complexity;
-      const x = centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * jitter;
-      const y = centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * jitter;
+    // Generate seeds around each cluster center
+    const seedsPerCluster = Math.min(5, config.numRegions - seeds.length);
+    
+    for (let i = 0; i < seedsPerCluster; i++) {
+      const angle = (2 * Math.PI * i) / seedsPerCluster + cluster * 0.5; // Add rotation offset
+      const radius = formationRadius * (0.3 + Math.random() * 0.4); // Varying distances
       
-      // Ensure seeds stay well within bounds with proper margins
+      // High jitter for irregular, tangled shapes
+      const jitter = formationRadius * 0.4 * config.complexity;
+      const x = clusterCenterX + Math.cos(angle) * radius + (Math.random() - 0.5) * jitter;
+      const y = clusterCenterY + Math.sin(angle) * radius + (Math.random() - 0.5) * jitter;
+      
+      // Ensure seeds stay within bounds
       const clampedX = Math.max(margin, Math.min(width - margin, x));
       const clampedY = Math.max(margin, Math.min(height - margin, y));
       
@@ -181,12 +185,27 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     }
   }
   
-  // Generate Voronoi cells
+  // Fill remaining seeds with random placement in the formation area
+  while (seeds.length < config.numRegions) {
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = Math.random() * formationRadius;
+    const jitter = formationRadius * 0.3;
+    
+    const x = centerX + Math.cos(angle) * radius + (Math.random() - 0.5) * jitter;
+    const y = centerY + Math.sin(angle) * radius + (Math.random() - 0.5) * jitter;
+    
+    const clampedX = Math.max(margin, Math.min(width - margin, x));
+    const clampedY = Math.max(margin, Math.min(height - margin, y));
+    
+    seeds.push({ x: clampedX, y: clampedY });
+  }
+  
+  // Generate Voronoi cells with tighter bounds for more tangled effect
   const regions: Region[] = [];
   
   for (let i = 0; i < seeds.length; i++) {
     const seed = seeds[i];
-    const vertices = generateVoronoiCell(seed, seeds, { width, height, margin });
+    const vertices = generateVoronoiCell(seed, seeds, { width, height, margin: margin * 0.5 });
     const center = calculateCentroid(vertices);
     
     regions.push({
@@ -198,8 +217,8 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     });
   }
   
-  // Find adjacencies
-  findAdjacencies(regions);
+  // Find adjacencies with increased tolerance for more connections (tangled effect)
+  findAdjacenciesWithTolerance(regions, 20);
   
   // Ensure all regions are connected by adding connections to isolated regions
   const isolated = regions.filter(r => r.adjacentRegions.length === 0);
@@ -216,4 +235,30 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   });
   
   return regions;
+};
+
+const findAdjacenciesWithTolerance = (regions: Region[], tolerance: number): void => {
+  for (let i = 0; i < regions.length; i++) {
+    for (let j = i + 1; j < regions.length; j++) {
+      const region1 = regions[i];
+      const region2 = regions[j];
+      
+      let isAdjacent = false;
+      
+      for (const vertex1 of region1.vertices) {
+        for (const vertex2 of region2.vertices) {
+          if (distance(vertex1, vertex2) < tolerance) {
+            isAdjacent = true;
+            break;
+          }
+        }
+        if (isAdjacent) break;
+      }
+      
+      if (isAdjacent) {
+        region1.adjacentRegions.push(region2.id);
+        region2.adjacentRegions.push(region1.id);
+      }
+    }
+  }
 };
