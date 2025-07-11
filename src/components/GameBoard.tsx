@@ -5,22 +5,10 @@ import { GameStats } from './GameStats';
 import { DifficultySelector, Difficulty } from './DifficultySelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { RefreshCw, Lightbulb, Trophy, Award } from 'lucide-react';
+import { RefreshCw, Lightbulb, Trophy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { generateRandomShape, getDifficultyConfig, ShapeVertex } from '@/utils/shapeGenerator';
+import { generateLargeComplexShape, getDifficultyConfig, Region } from '@/utils/shapeGenerator';
 import { calculateScore, ScoreData } from '@/utils/scoreCalculator';
-
-export interface BlockData {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color: string | null;
-  adjacentBlocks: string[];
-  shape: string;
-  vertices?: ShapeVertex[];
-}
 
 const AVAILABLE_COLORS = [
   { name: 'Red', value: '#ef4444', hex: '#ef4444' },
@@ -32,7 +20,7 @@ const AVAILABLE_COLORS = [
 ];
 
 export const GameBoard: React.FC = () => {
-  const [blocks, setBlocks] = useState<BlockData[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [colorsUsed, setColorsUsed] = useState(0);
@@ -42,108 +30,30 @@ export const GameBoard: React.FC = () => {
   const [score, setScore] = useState<ScoreData | null>(null);
   const [totalScore, setTotalScore] = useState(0);
 
-  const generateRandomBlocks = (difficulty: Difficulty, level: number) => {
-    const config = getDifficultyConfig(difficulty, level);
-    const newBlocks: BlockData[] = [];
+  const generateNewPuzzle = (difficulty: Difficulty, level: number) => {
     const boardWidth = 800;
     const boardHeight = 600;
-    const margin = 60;
-
-    // Generate blocks with chaotic, brain-like positioning
-    for (let i = 0; i < config.blockCount; i++) {
-      let x, y, attempts = 0;
-      let validPosition = false;
-
-      // Create clusters and tangles
-      if (i > 0 && Math.random() < 0.6) {
-        // 60% chance to place near existing blocks for clustering
-        const existingBlock = newBlocks[Math.floor(Math.random() * newBlocks.length)];
-        const clusterDistance = config.minSize * (0.8 + Math.random() * 0.6);
-        const clusterAngle = Math.random() * Math.PI * 2;
-        
-        x = existingBlock.x + Math.cos(clusterAngle) * clusterDistance;
-        y = existingBlock.y + Math.sin(clusterAngle) * clusterDistance;
-        
-        // Keep within bounds
-        x = Math.max(margin, Math.min(boardWidth - margin, x));
-        y = Math.max(margin, Math.min(boardHeight - margin, y));
-      } else {
-        // Random positioning for seed blocks
-        x = margin + Math.random() * (boardWidth - 2 * margin);
-        y = margin + Math.random() * (boardHeight - 2 * margin);
-      }
-
-      // Check for severe overlaps only (allow some overlap for tangled look)
-      validPosition = newBlocks.every(block => {
-        const distance = Math.sqrt(Math.pow(x - block.x, 2) + Math.pow(y - block.y, 2));
-        return distance > (config.minSize * 0.3); // Allow much closer positioning
-      });
-
-      if (!validPosition && attempts < 20) {
-        // If position is invalid, try a few more times but don't be too strict
-        attempts++;
-        if (attempts < 20) {
-          i--; // Retry this block
-          continue;
-        }
-      }
-
-      const size = config.minSize + Math.random() * (config.maxSize - config.minSize);
-      const { shape, vertices } = generateRandomShape(x, y, size, difficulty);
-
-      newBlocks.push({
-        id: `block-${i}`,
-        x,
-        y,
-        width: size,
-        height: size,
-        color: null,
-        adjacentBlocks: [],
-        shape,
-        vertices,
-      });
-    }
-
-    // Calculate adjacency with more liberal rules for tangled effect
-    newBlocks.forEach((block, index) => {
-      newBlocks.forEach((otherBlock, otherIndex) => {
-        if (index !== otherIndex) {
-          // Check if shapes actually overlap or are very close
-          const distance = Math.sqrt(
-            Math.pow(block.x - otherBlock.x, 2) + Math.pow(block.y - otherBlock.y, 2)
-          );
-          
-          // More generous adjacency detection for organic shapes
-          const baseThreshold = (block.width + otherBlock.width) / 2;
-          const organicMultiplier = difficulty === 'easy' ? 1.4 : difficulty === 'medium' ? 1.3 : 1.2;
-          const threshold = baseThreshold * organicMultiplier;
-          
-          if (distance < threshold) {
-            if (!block.adjacentBlocks.includes(otherBlock.id)) {
-              block.adjacentBlocks.push(otherBlock.id);
-            }
-          }
-        }
-      });
-    });
-
+    
+    const newRegions = generateLargeComplexShape(boardWidth, boardHeight, difficulty);
+    
     // Calculate minimum colors using Welsh-Powell algorithm
-    const minColors = calculateMinimumColorsWelshPowell(newBlocks);
-    setMinimumColors(Math.max(2, minColors)); // Ensure minimum is at least 2
-    setBlocks(newBlocks);
+    const minColors = calculateMinimumColorsWelshPowell(newRegions);
+    const config = getDifficultyConfig(difficulty, level);
+    setMinimumColors(Math.max(config.minColors, minColors));
+    setRegions(newRegions);
   };
 
-  const calculateMinimumColorsWelshPowell = (blocks: BlockData[]): number => {
-    // Sort blocks by degree (number of adjacent blocks) in descending order
-    const sortedBlocks = [...blocks].sort((a, b) => b.adjacentBlocks.length - a.adjacentBlocks.length);
+  const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
+    // Sort regions by degree (number of adjacent regions) in descending order
+    const sortedRegions = [...regions].sort((a, b) => b.adjacentRegions.length - a.adjacentRegions.length);
     const colorMap = new Map<string, number>();
     let maxColor = 0;
 
-    sortedBlocks.forEach(block => {
+    sortedRegions.forEach(region => {
       const usedColors = new Set<number>();
       
-      // Find colors used by adjacent blocks
-      block.adjacentBlocks.forEach(adjId => {
+      // Find colors used by adjacent regions
+      region.adjacentRegions.forEach(adjId => {
         if (colorMap.has(adjId)) {
           usedColors.add(colorMap.get(adjId)!);
         }
@@ -155,56 +65,56 @@ export const GameBoard: React.FC = () => {
         color++;
       }
 
-      colorMap.set(block.id, color);
+      colorMap.set(region.id, color);
       maxColor = Math.max(maxColor, color);
     });
 
     return maxColor;
   };
 
-  const handleBlockColor = (blockId: string, color: string) => {
+  const handleRegionColor = (regionId: string) => {
     if (!selectedColor) {
       toast({
         title: "Select a color first",
-        description: "Choose a color from the palette before coloring blocks.",
+        description: "Choose a color from the palette before coloring regions.",
         variant: "destructive",
       });
       return;
     }
 
-    const updatedBlocks = blocks.map(block => {
-      if (block.id === blockId) {
-        return { ...block, color: selectedColor };
+    const updatedRegions = regions.map(region => {
+      if (region.id === regionId) {
+        return { ...region, color: selectedColor };
       }
-      return block;
+      return region;
     });
 
     // Check for adjacency conflicts
-    const targetBlock = updatedBlocks.find(b => b.id === blockId);
-    if (targetBlock) {
-      const hasConflict = targetBlock.adjacentBlocks.some(adjId => {
-        const adjBlock = updatedBlocks.find(b => b.id === adjId);
-        return adjBlock && adjBlock.color === selectedColor;
+    const targetRegion = updatedRegions.find(r => r.id === regionId);
+    if (targetRegion) {
+      const hasConflict = targetRegion.adjacentRegions.some(adjId => {
+        const adjRegion = updatedRegions.find(r => r.id === adjId);
+        return adjRegion && adjRegion.color === selectedColor;
       });
 
       if (hasConflict) {
         toast({
           title: "Invalid move!",
-          description: "Adjacent blocks cannot have the same color.",
+          description: "Adjacent regions cannot have the same color.",
           variant: "destructive",
         });
         return;
       }
     }
 
-    setBlocks(updatedBlocks);
-    checkGameCompletion(updatedBlocks);
+    setRegions(updatedRegions);
+    checkGameCompletion(updatedRegions);
   };
 
-  const checkGameCompletion = (currentBlocks: BlockData[]) => {
-    const allColored = currentBlocks.every(block => block.color !== null);
+  const checkGameCompletion = (currentRegions: Region[]) => {
+    const allColored = currentRegions.every(region => region.color !== null);
     if (allColored) {
-      const uniqueColors = new Set(currentBlocks.map(block => block.color).filter(Boolean));
+      const uniqueColors = new Set(currentRegions.map(region => region.color).filter(Boolean));
       const usedColors = uniqueColors.size;
       setColorsUsed(usedColors);
       setGameCompleted(true);
@@ -225,7 +135,7 @@ export const GameBoard: React.FC = () => {
     setColorsUsed(0);
     setSelectedColor(null);
     setScore(null);
-    generateRandomBlocks(difficulty, level);
+    generateNewPuzzle(difficulty, level);
   };
 
   const nextLevel = () => {
@@ -234,14 +144,14 @@ export const GameBoard: React.FC = () => {
   };
 
   const showHint = () => {
-    // Find the block with most connections for hint
-    const blockWithMostConnections = blocks.reduce((max, block) => 
-      block.adjacentBlocks.length > max.adjacentBlocks.length ? block : max
+    // Find the region with most connections for hint
+    const regionWithMostConnections = regions.reduce((max, region) => 
+      region.adjacentRegions.length > max.adjacentRegions.length ? region : max
     );
     
     toast({
       title: "Hint 💡",
-      description: `Try coloring block ${blockWithMostConnections.id.split('-')[1]} first - it has ${blockWithMostConnections.adjacentBlocks.length} connections!`,
+      description: `Try coloring region ${regionWithMostConnections.id.split('-')[1]} first - it has ${regionWithMostConnections.adjacentRegions.length} connections!`,
     });
   };
 
@@ -251,11 +161,11 @@ export const GameBoard: React.FC = () => {
     setTotalScore(0);
     setGameCompleted(false);
     setScore(null);
-    generateRandomBlocks(newDifficulty, 1);
+    generateNewPuzzle(newDifficulty, 1);
   };
 
   useEffect(() => {
-    generateRandomBlocks(difficulty, level);
+    generateNewPuzzle(difficulty, level);
   }, []);
 
   return (
@@ -319,17 +229,17 @@ export const GameBoard: React.FC = () => {
             <Card className="p-6">
               <div className="relative bg-white rounded-lg border-2 border-gray-200 overflow-hidden" style={{ height: '700px' }}>
                 <svg width="100%" height="100%" className="absolute inset-0" viewBox="0 0 800 600">
-                  {blocks.map(block => 
-                    block.adjacentBlocks.map(adjId => {
-                      const adjBlock = blocks.find(b => b.id === adjId);
-                      if (adjBlock && block.id < adjId) {
+                  {regions.map(region => 
+                    region.adjacentRegions.map(adjId => {
+                      const adjRegion = regions.find(r => r.id === adjId);
+                      if (adjRegion && region.id < adjId) {
                         return (
                           <line
-                            key={`${block.id}-${adjId}`}
-                            x1={block.x}
-                            y1={block.y}
-                            x2={adjBlock.x}
-                            y2={adjBlock.y}
+                            key={`${region.id}-${adjId}`}
+                            x1={region.center.x}
+                            y1={region.center.y}
+                            x2={adjRegion.center.x}
+                            y2={adjRegion.center.y}
                             stroke="#e5e7eb"
                             strokeWidth="1"
                             strokeDasharray="3,3"
@@ -341,14 +251,31 @@ export const GameBoard: React.FC = () => {
                     })
                   )}
                   
-                  {blocks.map(block => (
-                    <Block
-                      key={block.id}
-                      block={block}
-                      onColor={handleBlockColor}
-                      isSelected={false}
-                    />
-                  ))}
+                  {regions.map(region => {
+                    const points = region.vertices.map(v => `${v.x},${v.y}`).join(' ');
+                    return (
+                      <g key={region.id}>
+                        <polygon
+                          points={points}
+                          fill={region.color || '#ffffff'}
+                          stroke={region.color ? '#374151' : '#9ca3af'}
+                          strokeWidth="2"
+                          className="cursor-pointer hover:stroke-gray-800 transition-all duration-200"
+                          onClick={() => handleRegionColor(region.id)}
+                        />
+                        <text
+                          x={region.center.x}
+                          y={region.center.y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="text-xs font-semibold pointer-events-none select-none"
+                          fill={region.color ? '#ffffff' : '#374151'}
+                        >
+                          {region.id.split('-')[1]}
+                        </text>
+                      </g>
+                    );
+                  })}
                 </svg>
               </div>
             </Card>

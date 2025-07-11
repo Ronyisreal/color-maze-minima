@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BlockData } from './GameBoard';
 
@@ -27,20 +26,7 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
     const strokeWidth = isSelected ? 3 : 2;
     const className = "cursor-pointer hover:stroke-gray-800 transition-all duration-200";
 
-    if (block.shape === 'circle') {
-      return (
-        <circle
-          cx={block.x}
-          cy={block.y}
-          r={block.width / 2}
-          fill={getFill()}
-          stroke={getStroke()}
-          strokeWidth={strokeWidth}
-          className={className}
-          onClick={handleClick}
-        />
-      );
-    } else if (block.vertices && block.vertices.length > 0) {
+    if (block.vertices && block.vertices.length > 0) {
       const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
       return (
         <polygon
