@@ -1,8 +1,9 @@
+
 import React from 'react';
-import { BlockData } from './GameBoard';
+import { Region } from '@/utils/shapeGenerator';
 
 interface BlockProps {
-  block: BlockData;
+  block: Region;
   onColor: (blockId: string, color: string) => void;
   isSelected: boolean;
 }
@@ -26,41 +27,25 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
     const strokeWidth = isSelected ? 3 : 2;
     const className = "cursor-pointer hover:stroke-gray-800 transition-all duration-200";
 
-    if (block.vertices && block.vertices.length > 0) {
-      const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
-      return (
-        <polygon
-          points={points}
-          fill={getFill()}
-          stroke={getStroke()}
-          strokeWidth={strokeWidth}
-          className={className}
-          onClick={handleClick}
-        />
-      );
-    } else {
-      return (
-        <rect
-          x={block.x - block.width / 2}
-          y={block.y - block.height / 2}
-          width={block.width}
-          height={block.height}
-          fill={getFill()}
-          stroke={getStroke()}
-          strokeWidth={strokeWidth}
-          className={className}
-          onClick={handleClick}
-        />
-      );
-    }
+    const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
+    return (
+      <polygon
+        points={points}
+        fill={getFill()}
+        stroke={getStroke()}
+        strokeWidth={strokeWidth}
+        className={className}
+        onClick={handleClick}
+      />
+    );
   };
 
   return (
     <g>
       {renderShape()}
       <text
-        x={block.x}
-        y={block.y}
+        x={block.center.x}
+        y={block.center.y}
         textAnchor="middle"
         dominantBaseline="middle"
         className="text-xs font-semibold pointer-events-none select-none"
