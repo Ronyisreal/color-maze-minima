@@ -21,7 +21,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       id: 'easy' as Difficulty,
       name: 'Easy',
       icon: Star,
-      description: '4-6 blocks, simple shapes',
+      description: 'Simple shapes',
       color: 'bg-green-500',
       blocks: '4-6',
     },
@@ -29,7 +29,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       id: 'medium' as Difficulty,
       name: 'Medium',
       icon: Zap,
-      description: '7-10 blocks, mixed shapes',
+      description: 'Mixed shapes',
       color: 'bg-yellow-500',
       blocks: '7-10',
     },
@@ -37,7 +37,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       id: 'hard' as Difficulty,
       name: 'Hard',
       icon: Flame,
-      description: '11-15 blocks, complex shapes',
+      description: 'Complex shapes',
       color: 'bg-red-500',
       blocks: '11-15',
     },
@@ -60,16 +60,16 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
               onClick={() => onDifficultyChange(difficulty.id)}
             >
               <div className="flex items-center gap-3 w-full">
-                <div className={`p-2 rounded ${difficulty.color} text-white`}>
-                  <Icon className="w-4 h-4" />
+                <div className={`p-1.5 rounded ${difficulty.color} text-white flex-shrink-0`}>
+                  <Icon className="w-3 h-3" />
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium">{difficulty.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {difficulty.description}
+                <div className="flex-1 text-left min-w-0">
+                  <div className="font-medium text-sm">{difficulty.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {difficulty.blocks} blocks, {difficulty.description}
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs flex-shrink-0">
                   {difficulty.blocks}
                 </Badge>
               </div>

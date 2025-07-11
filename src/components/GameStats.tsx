@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Palette, Star, Award } from 'lucide-react';
+import { Trophy, Target, Palette, Star, Award, Info } from 'lucide-react';
 import { ScoreData } from '@/utils/scoreCalculator';
 
 interface GameStatsProps {
@@ -114,8 +114,23 @@ export const GameStats: React.FC<GameStatsProps> = ({
           <li>Adjacent blocks cannot have the same color</li>
           <li>Use minimum colors to get perfect score</li>
           <li>Dashed lines show block connections</li>
-          <li>Higher difficulty = more points</li>
         </ul>
+        
+        <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+          <div className="flex items-start gap-1">
+            <Info className="w-3 h-3 mt-0.5 text-blue-600 flex-shrink-0" />
+            <div>
+              <strong className="text-blue-800">Scoring:</strong>
+              <ul className="mt-1 space-y-0.5">
+                <li>• Easy: 100 base points</li>
+                <li>• Medium: 200 base points</li>
+                <li>• Hard: 300 base points</li>
+                <li>• Perfect color usage = 100% bonus</li>
+                <li>• Higher levels = more multiplier</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

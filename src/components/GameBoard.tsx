@@ -45,9 +45,9 @@ export const GameBoard: React.FC = () => {
   const generateRandomBlocks = (difficulty: Difficulty, level: number) => {
     const config = getDifficultyConfig(difficulty, level);
     const newBlocks: BlockData[] = [];
-    const boardWidth = 600;
-    const boardHeight = 400;
-    const margin = 40; // Reduced margin for more crowded look
+    const boardWidth = 800;
+    const boardHeight = 600;
+    const margin = 60;
 
     // Generate blocks with chaotic, brain-like positioning
     for (let i = 0; i < config.blockCount; i++) {
@@ -260,7 +260,7 @@ export const GameBoard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Color Block Maze Solver</h1>
           <p className="text-gray-600">Color all blocks using the minimum number of colors. Adjacent blocks cannot share the same color!</p>
@@ -271,7 +271,7 @@ export const GameBoard: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           <div className="lg:col-span-1 space-y-4">
             <DifficultySelector 
               selectedDifficulty={difficulty}
@@ -315,10 +315,10 @@ export const GameBoard: React.FC = () => {
             </div>
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             <Card className="p-6">
-              <div className="relative bg-white rounded-lg border-2 border-gray-200 overflow-hidden" style={{ height: '500px' }}>
-                <svg width="100%" height="100%" className="absolute inset-0">
+              <div className="relative bg-white rounded-lg border-2 border-gray-200 overflow-hidden" style={{ height: '700px' }}>
+                <svg width="100%" height="100%" className="absolute inset-0" viewBox="0 0 800 600">
                   {blocks.map(block => 
                     block.adjacentBlocks.map(adjId => {
                       const adjBlock = blocks.find(b => b.id === adjId);
