@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
@@ -20,7 +19,14 @@ const AVAILABLE_COLORS = [
   { name: 'Orange', value: '#f97316', hex: '#f97316' },
 ];
 
-const GAME_TIME_LIMIT = 60; // 1 minute for all difficulty levels
+const getTimeLimit = (difficulty: Difficulty): number => {
+  switch (difficulty) {
+    case 'easy': return 180; // 3 minutes
+    case 'medium': return 420; // 7 minutes
+    case 'hard': return 600; // 10 minutes
+    default: return 180;
+  }
+};
 
 export const GameBoard: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
@@ -33,7 +39,7 @@ export const GameBoard: React.FC = () => {
   const [score, setScore] = useState<ScoreData | null>(null);
   const [totalScore, setTotalScore] = useState(0);
   const [currentScore, setCurrentScore] = useState(100); // Starting score of 100
-  const [timeLeft, setTimeLeft] = useState(GAME_TIME_LIMIT);
+  const [timeLeft, setTimeLeft] = useState(getTimeLimit('easy'));
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
 
@@ -206,7 +212,7 @@ export const GameBoard: React.FC = () => {
     setSelectedColor(null);
     setScore(null);
     setCurrentScore(100);
-    setTimeLeft(GAME_TIME_LIMIT);
+    setTimeLeft(getTimeLimit(difficulty));
     generateNewPuzzle(difficulty, level);
   };
 
@@ -236,7 +242,7 @@ export const GameBoard: React.FC = () => {
     setGameStarted(false);
     setScore(null);
     setCurrentScore(100);
-    setTimeLeft(GAME_TIME_LIMIT);
+    setTimeLeft(getTimeLimit(newDifficulty));
     generateNewPuzzle(newDifficulty, 1);
   };
 
