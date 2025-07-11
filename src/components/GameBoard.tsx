@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
@@ -48,25 +47,46 @@ export const GameBoard: React.FC = () => {
     const newBlocks: BlockData[] = [];
     const boardWidth = 600;
     const boardHeight = 400;
-    const margin = 80;
+    const margin = 40; // Reduced margin for more crowded look
 
-    // Generate blocks with improved spacing
+    // Generate blocks with chaotic, brain-like positioning
     for (let i = 0; i < config.blockCount; i++) {
       let x, y, attempts = 0;
       let validPosition = false;
 
-      // Try to find a position that doesn't overlap too much
-      do {
+      // Create clusters and tangles
+      if (i > 0 && Math.random() < 0.6) {
+        // 60% chance to place near existing blocks for clustering
+        const existingBlock = newBlocks[Math.floor(Math.random() * newBlocks.length)];
+        const clusterDistance = config.minSize * (0.8 + Math.random() * 0.6);
+        const clusterAngle = Math.random() * Math.PI * 2;
+        
+        x = existingBlock.x + Math.cos(clusterAngle) * clusterDistance;
+        y = existingBlock.y + Math.sin(clusterAngle) * clusterDistance;
+        
+        // Keep within bounds
+        x = Math.max(margin, Math.min(boardWidth - margin, x));
+        y = Math.max(margin, Math.min(boardHeight - margin, y));
+      } else {
+        // Random positioning for seed blocks
         x = margin + Math.random() * (boardWidth - 2 * margin);
         y = margin + Math.random() * (boardHeight - 2 * margin);
-        
-        validPosition = newBlocks.every(block => {
-          const distance = Math.sqrt(Math.pow(x - block.x, 2) + Math.pow(y - block.y, 2));
-          return distance > (config.minSize * config.spacing);
-        });
-        
+      }
+
+      // Check for severe overlaps only (allow some overlap for tangled look)
+      validPosition = newBlocks.every(block => {
+        const distance = Math.sqrt(Math.pow(x - block.x, 2) + Math.pow(y - block.y, 2));
+        return distance > (config.minSize * 0.3); // Allow much closer positioning
+      });
+
+      if (!validPosition && attempts < 20) {
+        // If position is invalid, try a few more times but don't be too strict
         attempts++;
-      } while (!validPosition && attempts < 50);
+        if (attempts < 20) {
+          i--; // Retry this block
+          continue;
+        }
+      }
 
       const size = config.minSize + Math.random() * (config.maxSize - config.minSize);
       const { shape, vertices } = generateRandomShape(x, y, size, difficulty);
@@ -84,18 +104,19 @@ export const GameBoard: React.FC = () => {
       });
     }
 
-    // Calculate adjacency with improved logic
+    // Calculate adjacency with more liberal rules for tangled effect
     newBlocks.forEach((block, index) => {
       newBlocks.forEach((otherBlock, otherIndex) => {
         if (index !== otherIndex) {
+          // Check if shapes actually overlap or are very close
           const distance = Math.sqrt(
             Math.pow(block.x - otherBlock.x, 2) + Math.pow(block.y - otherBlock.y, 2)
           );
           
-          // Adjusted threshold based on difficulty
+          // More generous adjacency detection for organic shapes
           const baseThreshold = (block.width + otherBlock.width) / 2;
-          const difficultyMultiplier = difficulty === 'easy' ? 1.3 : difficulty === 'medium' ? 1.2 : 1.1;
-          const threshold = baseThreshold * difficultyMultiplier;
+          const organicMultiplier = difficulty === 'easy' ? 1.4 : difficulty === 'medium' ? 1.3 : 1.2;
+          const threshold = baseThreshold * organicMultiplier;
           
           if (distance < threshold) {
             if (!block.adjacentBlocks.includes(otherBlock.id)) {
@@ -310,8 +331,9 @@ export const GameBoard: React.FC = () => {
                             x2={adjBlock.x}
                             y2={adjBlock.y}
                             stroke="#e5e7eb"
-                            strokeWidth="2"
-                            strokeDasharray="5,5"
+                            strokeWidth="1"
+                            strokeDasharray="3,3"
+                            opacity="0.6"
                           />
                         );
                       }
