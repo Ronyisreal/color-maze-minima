@@ -1,4 +1,3 @@
-
 import { Difficulty } from '@/components/DifficultySelector';
 
 export interface ShapeVertex {
@@ -20,43 +19,48 @@ export const generateLargeComplexShape = (
   difficulty: Difficulty
 ): Region[] => {
   const regions: Region[] = [];
-  const margin = 80;
+  const margin = 40;
   const usableWidth = boardWidth - 2 * margin;
   const usableHeight = boardHeight - 2 * margin;
   
   // Determine complexity based on difficulty
   const complexity = {
-    easy: { regions: 6, subdivisions: 2, irregularity: 0.3 },
-    medium: { regions: 10, subdivisions: 3, irregularity: 0.5 },
-    hard: { regions: 15, subdivisions: 4, irregularity: 0.7 }
+    easy: { regions: 8, gridSize: 3, irregularity: 0.4 },
+    medium: { regions: 12, gridSize: 4, irregularity: 0.6 },
+    hard: { regions: 16, gridSize: 5, irregularity: 0.8 }
   }[difficulty];
 
-  // Create a large organic base shape
-  const baseShape = createOrganicBaseShape(
-    margin + usableWidth / 2,
-    margin + usableHeight / 2,
-    Math.min(usableWidth, usableHeight) * 0.8,
+  // Create a grid-based interconnected shape that fills the canvas
+  const gridWidth = usableWidth / complexity.gridSize;
+  const gridHeight = usableHeight / complexity.gridSize;
+  
+  // Generate interconnected regions using a modified Voronoi approach
+  const regionCenters = generateInterconnectedCenters(
+    margin,
+    usableWidth,
+    usableHeight,
+    complexity.regions,
+    complexity.gridSize
+  );
+
+  // Create the main interconnected shape boundary
+  const mainBoundary = createMainShapeBoundary(
+    margin,
+    usableWidth,
+    usableHeight,
     complexity.irregularity
   );
 
-  // Subdivide the base shape into regions using Voronoi-like approach
-  const regionCenters = generateRegionCenters(
-    baseShape,
-    complexity.regions,
-    margin,
-    usableWidth,
-    usableHeight
-  );
-
-  // Create regions by subdividing the base shape
+  // Create regions by subdividing the main shape
   regionCenters.forEach((center, index) => {
-    const regionVertices = createRegionFromCenter(
+    const regionVertices = createInterconnectedRegion(
       center,
-      baseShape,
       regionCenters,
       index,
-      complexity.subdivisions,
-      complexity.irregularity
+      mainBoundary,
+      complexity.irregularity,
+      gridWidth,
+      gridHeight
     );
 
     regions.push({
@@ -68,42 +72,77 @@ export const generateLargeComplexShape = (
     });
   });
 
-  // Calculate adjacency between regions
-  calculateRegionAdjacency(regions);
+  // Ensure all regions are properly connected
+  calculateProperAdjacency(regions);
+  
+  // Fix any disconnected regions
+  ensureConnectivity(regions);
 
   return regions;
 };
 
-const createOrganicBaseShape = (
-  centerX: number,
-  centerY: number,
-  size: number,
+const generateInterconnectedCenters = (
+  margin: number,
+  usableWidth: number,
+  usableHeight: number,
+  regionCount: number,
+  gridSize: number
+): { x: number; y: number }[] => {
+  const centers: { x: number; y: number }[] = [];
+  const cellWidth = usableWidth / gridSize;
+  const cellHeight = usableHeight / gridSize;
+  
+  // Create a more distributed pattern across the entire canvas
+  for (let i = 0; i < regionCount; i++) {
+    const row = Math.floor(i / Math.ceil(Math.sqrt(regionCount)));
+    const col = i % Math.ceil(Math.sqrt(regionCount));
+    
+    const baseX = margin + (col * usableWidth) / Math.ceil(Math.sqrt(regionCount));
+    const baseY = margin + (row * usableHeight) / Math.ceil(Math.sqrt(regionCount));
+    
+    // Add some randomization but keep regions spread out
+    const jitterX = (Math.random() - 0.5) * (usableWidth / regionCount) * 0.8;
+    const jitterY = (Math.random() - 0.5) * (usableHeight / regionCount) * 0.8;
+    
+    centers.push({
+      x: Math.max(margin + 50, Math.min(margin + usableWidth - 50, baseX + jitterX)),
+      y: Math.max(margin + 50, Math.min(margin + usableHeight - 50, baseY + jitterY))
+    });
+  }
+  
+  return centers;
+};
+
+const createMainShapeBoundary = (
+  margin: number,
+  usableWidth: number,
+  usableHeight: number,
   irregularity: number
 ): ShapeVertex[] => {
   const vertices: ShapeVertex[] = [];
-  const vertexCount = 20 + Math.floor(Math.random() * 15);
+  const centerX = margin + usableWidth / 2;
+  const centerY = margin + usableHeight / 2;
+  const vertexCount = 24 + Math.floor(Math.random() * 16);
 
   for (let i = 0; i < vertexCount; i++) {
     const angle = (i * 2 * Math.PI) / vertexCount;
     
-    // Create organic, brain-like outer boundary
-    const radiusVariation = 0.6 + Math.random() * 0.8;
-    const roughness = 0.8 + Math.random() * 0.4;
-    const bumpFactor = Math.sin(angle * 4 + Math.random() * Math.PI) * irregularity;
-    const noiseFactor = Math.sin(angle * 8 + Math.random() * Math.PI) * (irregularity * 0.3);
+    // Create boundary that uses most of the canvas
+    const baseRadiusX = (usableWidth / 2) * 0.9;
+    const baseRadiusY = (usableHeight / 2) * 0.9;
     
-    const radius = (size / 2) * radiusVariation * roughness * (1 + bumpFactor + noiseFactor);
+    // Add organic variation
+    const radiusVariationX = 0.7 + Math.random() * 0.6;
+    const radiusVariationY = 0.7 + Math.random() * 0.6;
     
-    // Add angular distortion
-    const angleDistortion = (Math.random() - 0.5) * irregularity;
-    const distortedAngle = angle + angleDistortion;
+    const organicFactor = Math.sin(angle * 3 + Math.random() * Math.PI) * irregularity * 0.3;
+    const noiseFactor = Math.sin(angle * 7 + Math.random() * Math.PI) * irregularity * 0.15;
     
-    // Add positional jitter
-    const jitterX = (Math.random() - 0.5) * size * irregularity * 0.1;
-    const jitterY = (Math.random() - 0.5) * size * irregularity * 0.1;
+    const radiusX = baseRadiusX * radiusVariationX * (1 + organicFactor + noiseFactor);
+    const radiusY = baseRadiusY * radiusVariationY * (1 + organicFactor + noiseFactor);
     
-    const x = centerX + Math.cos(distortedAngle) * radius + jitterX;
-    const y = centerY + Math.sin(distortedAngle) * radius + jitterY;
+    const x = centerX + Math.cos(angle) * radiusX;
+    const y = centerY + Math.sin(angle) * radiusY;
     
     vertices.push({ x, y });
   }
@@ -111,66 +150,54 @@ const createOrganicBaseShape = (
   return vertices;
 };
 
-const generateRegionCenters = (
-  baseShape: ShapeVertex[],
-  regionCount: number,
-  margin: number,
-  usableWidth: number,
-  usableHeight: number
-): { x: number; y: number }[] => {
-  const centers: { x: number; y: number }[] = [];
-  
-  // Calculate bounds of the base shape
-  const bounds = {
-    minX: Math.min(...baseShape.map(v => v.x)),
-    maxX: Math.max(...baseShape.map(v => v.x)),
-    minY: Math.min(...baseShape.map(v => v.y)),
-    maxY: Math.max(...baseShape.map(v => v.y))
-  };
-
-  // Generate region centers within the base shape bounds
-  for (let i = 0; i < regionCount; i++) {
-    let attempts = 0;
-    let center: { x: number; y: number };
-    
-    do {
-      center = {
-        x: bounds.minX + Math.random() * (bounds.maxX - bounds.minX),
-        y: bounds.minY + Math.random() * (bounds.maxY - bounds.minY)
-      };
-      attempts++;
-    } while (attempts < 50 && !isPointInPolygon(center, baseShape));
-    
-    centers.push(center);
-  }
-
-  return centers;
-};
-
-const createRegionFromCenter = (
+const createInterconnectedRegion = (
   center: { x: number; y: number },
-  baseShape: ShapeVertex[],
   allCenters: { x: number; y: number }[],
   regionIndex: number,
-  subdivisions: number,
-  irregularity: number
+  mainBoundary: ShapeVertex[],
+  irregularity: number,
+  gridWidth: number,
+  gridHeight: number
 ): ShapeVertex[] => {
   const vertices: ShapeVertex[] = [];
-  const baseRadius = 40 + Math.random() * 30;
-  const vertexCount = 6 + Math.floor(Math.random() * (subdivisions * 2));
+  
+  // Create regions that connect to nearby regions
+  const nearbyRegions = allCenters
+    .map((otherCenter, index) => ({ center: otherCenter, index, distance: Math.sqrt(Math.pow(center.x - otherCenter.x, 2) + Math.pow(center.y - otherCenter.y, 2)) }))
+    .filter(item => item.index !== regionIndex)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 4); // Connect to 4 nearest regions
+
+  // Create Voronoi-like cell boundaries but with organic shapes
+  const baseRadius = Math.min(gridWidth, gridHeight) * 0.4;
+  const vertexCount = 8 + Math.floor(Math.random() * 6);
 
   for (let i = 0; i < vertexCount; i++) {
     const angle = (i * 2 * Math.PI) / vertexCount;
     
-    // Create irregular region boundaries
-    const radiusVariation = 0.5 + Math.random() * 0.8;
-    const organicFactor = Math.sin(angle * 3 + Math.random() * Math.PI) * irregularity * 0.5;
-    const noiseFactor = Math.sin(angle * 7 + Math.random() * Math.PI) * irregularity * 0.2;
+    // Create organic, interconnected boundaries
+    let radius = baseRadius;
     
-    const radius = baseRadius * radiusVariation * (1 + organicFactor + noiseFactor);
+    // Adjust radius based on nearby regions to create connections
+    nearbyRegions.forEach(nearby => {
+      const angleToNearby = Math.atan2(nearby.center.y - center.y, nearby.center.x - center.x);
+      const angleDiff = Math.abs(angle - angleToNearby);
+      const normalizedAngleDiff = Math.min(angleDiff, 2 * Math.PI - angleDiff);
+      
+      if (normalizedAngleDiff < Math.PI / 3) {
+        // Extend towards nearby regions
+        radius *= (1 + 0.3 * (1 - normalizedAngleDiff / (Math.PI / 3)));
+      }
+    });
     
-    // Add distortion
-    const angleDistortion = (Math.random() - 0.5) * irregularity * 0.5;
+    // Add organic variation
+    const organicFactor = Math.sin(angle * 4 + regionIndex) * irregularity * 0.4;
+    const noiseFactor = Math.sin(angle * 8 + regionIndex * 2) * irregularity * 0.2;
+    
+    radius *= (0.6 + Math.random() * 0.8) * (1 + organicFactor + noiseFactor);
+    
+    // Add some angular distortion
+    const angleDistortion = (Math.random() - 0.5) * irregularity * 0.3;
     const distortedAngle = angle + angleDistortion;
     
     const x = center.x + Math.cos(distortedAngle) * radius;
@@ -179,8 +206,9 @@ const createRegionFromCenter = (
     vertices.push({ x, y });
   }
 
-  // Add some random bulges for extra complexity
-  for (let i = 0; i < subdivisions; i++) {
+  // Add some irregular bulges for complexity
+  const bulgeCount = 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < bulgeCount; i++) {
     const insertIndex = Math.floor(Math.random() * vertices.length);
     const prevVertex = vertices[insertIndex];
     const nextVertex = vertices[(insertIndex + 1) % vertices.length];
@@ -189,7 +217,7 @@ const createRegionFromCenter = (
     const midY = (prevVertex.y + nextVertex.y) / 2;
     
     const bulgeDirection = Math.random() * Math.PI * 2;
-    const bulgeMagnitude = (Math.random() - 0.3) * baseRadius * irregularity;
+    const bulgeMagnitude = (Math.random() - 0.2) * baseRadius * irregularity * 0.5;
     
     const bulgeX = midX + Math.cos(bulgeDirection) * bulgeMagnitude;
     const bulgeY = midY + Math.sin(bulgeDirection) * bulgeMagnitude;
@@ -200,22 +228,25 @@ const createRegionFromCenter = (
   return vertices;
 };
 
-const calculateRegionAdjacency = (regions: Region[]) => {
+const calculateProperAdjacency = (regions: Region[]) => {
   regions.forEach((region, index) => {
     regions.forEach((otherRegion, otherIndex) => {
       if (index !== otherIndex) {
-        // Check if regions are adjacent by checking if their boundaries are close
+        // Check if regions share boundaries or are very close
         const distance = Math.sqrt(
           Math.pow(region.center.x - otherRegion.center.x, 2) +
           Math.pow(region.center.y - otherRegion.center.y, 2)
         );
         
-        // More generous adjacency for organic shapes
-        const threshold = 80 + Math.random() * 40;
+        // More generous adjacency threshold for interconnected shapes
+        const threshold = 120 + Math.random() * 30;
         
         if (distance < threshold) {
-          if (!region.adjacentRegions.includes(otherRegion.id)) {
-            region.adjacentRegions.push(otherRegion.id);
+          // Also check if polygons actually intersect or are very close
+          if (regionsAreAdjacent(region, otherRegion)) {
+            if (!region.adjacentRegions.includes(otherRegion.id)) {
+              region.adjacentRegions.push(otherRegion.id);
+            }
           }
         }
       }
@@ -223,36 +254,104 @@ const calculateRegionAdjacency = (regions: Region[]) => {
   });
 };
 
-const isPointInPolygon = (point: { x: number; y: number }, polygon: ShapeVertex[]): boolean => {
-  let inside = false;
-  
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    if (
-      ((polygon[i].y > point.y) !== (polygon[j].y > point.y)) &&
-      (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)
-    ) {
-      inside = !inside;
+const regionsAreAdjacent = (region1: Region, region2: Region): boolean => {
+  // Check if any vertex of region1 is close to any edge of region2
+  for (const vertex1 of region1.vertices) {
+    for (let i = 0; i < region2.vertices.length; i++) {
+      const vertex2a = region2.vertices[i];
+      const vertex2b = region2.vertices[(i + 1) % region2.vertices.length];
+      
+      const distance = pointToLineDistance(vertex1, vertex2a, vertex2b);
+      if (distance < 25) return true;
     }
   }
   
-  return inside;
+  // Check if any vertex of region2 is close to any edge of region1
+  for (const vertex2 of region2.vertices) {
+    for (let i = 0; i < region1.vertices.length; i++) {
+      const vertex1a = region1.vertices[i];
+      const vertex1b = region1.vertices[(i + 1) % region1.vertices.length];
+      
+      const distance = pointToLineDistance(vertex2, vertex1a, vertex1b);
+      if (distance < 25) return true;
+    }
+  }
+  
+  return false;
+};
+
+const pointToLineDistance = (point: ShapeVertex, lineStart: ShapeVertex, lineEnd: ShapeVertex): number => {
+  const A = point.x - lineStart.x;
+  const B = point.y - lineStart.y;
+  const C = lineEnd.x - lineStart.x;
+  const D = lineEnd.y - lineStart.y;
+
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+  let param = -1;
+  if (lenSq !== 0) param = dot / lenSq;
+
+  let xx, yy;
+  if (param < 0) {
+    xx = lineStart.x;
+    yy = lineStart.y;
+  } else if (param > 1) {
+    xx = lineEnd.x;
+    yy = lineEnd.y;
+  } else {
+    xx = lineStart.x + param * C;
+    yy = lineStart.y + param * D;
+  }
+
+  const dx = point.x - xx;
+  const dy = point.y - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+const ensureConnectivity = (regions: Region[]) => {
+  // Ensure each region has at least 2 connections to avoid isolated regions
+  regions.forEach(region => {
+    if (region.adjacentRegions.length < 2) {
+      // Find the closest regions and force connections
+      const distances = regions
+        .filter(other => other.id !== region.id && !region.adjacentRegions.includes(other.id))
+        .map(other => ({
+          region: other,
+          distance: Math.sqrt(
+            Math.pow(region.center.x - other.center.x, 2) +
+            Math.pow(region.center.y - other.center.y, 2)
+          )
+        }))
+        .sort((a, b) => a.distance - b.distance);
+      
+      // Add connections to the closest regions
+      const connectionsNeeded = Math.max(0, 2 - region.adjacentRegions.length);
+      for (let i = 0; i < Math.min(connectionsNeeded, distances.length); i++) {
+        const targetRegion = distances[i].region;
+        region.adjacentRegions.push(targetRegion.id);
+        if (!targetRegion.adjacentRegions.includes(region.id)) {
+          targetRegion.adjacentRegions.push(region.id);
+        }
+      }
+    }
+  });
 };
 
 export const getDifficultyConfig = (difficulty: Difficulty, level: number) => {
   const configs = {
     easy: {
-      regionCount: Math.min(6 + level, 8),
-      complexity: 0.3,
+      regionCount: Math.min(8 + level, 10),
+      complexity: 0.4,
       minColors: 3,
     },
     medium: {
-      regionCount: Math.min(10 + level, 13),
-      complexity: 0.5,
+      regionCount: Math.min(12 + level, 15),
+      complexity: 0.6,
       minColors: 4,
     },
     hard: {
-      regionCount: Math.min(15 + level, 18),
-      complexity: 0.7,
+      regionCount: Math.min(16 + level, 20),
+      complexity: 0.8,
       minColors: 5,
     },
   };
