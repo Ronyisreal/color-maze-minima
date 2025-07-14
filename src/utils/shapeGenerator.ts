@@ -222,7 +222,7 @@ const generateMapRegions = (width: number, height: number, numRegions: number): 
   return regions;
 };
 
-// Create a Voronoi cell using the half-plane intersection method
+// Create a Voronoi cell using the half-plane intersection method with organic smoothing
 const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
   // Start with the bounding rectangle
   let clipVertices: Point[] = [
@@ -240,7 +240,81 @@ const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height
     if (clipVertices.length < 3) break; // Polygon too small
   }
   
-  return clipVertices;
+  // Add organic variation to make shapes more natural and map-like
+  const organicVertices = addOrganicVariation(clipVertices, seed);
+  
+  return organicVertices;
+};
+
+// Add organic variation to make shapes look more like natural regions
+const addOrganicVariation = (vertices: Point[], seed: Point): Point[] => {
+  if (vertices.length < 3) return vertices;
+  
+  const organic: Point[] = [];
+  const avgDistance = vertices.reduce((sum, v) => sum + distance(v, seed), 0) / vertices.length;
+  const variationAmount = avgDistance * 0.15; // 15% variation
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const current = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    // Add the current vertex with slight organic displacement
+    const displacement = (Math.random() - 0.5) * variationAmount * 0.3;
+    const angle = Math.atan2(current.y - seed.y, current.x - seed.x);
+    const displacedVertex = {
+      x: current.x + Math.cos(angle) * displacement,
+      y: current.y + Math.sin(angle) * displacement
+    };
+    organic.push(displacedVertex);
+    
+    // Add 1-2 intermediate points along each edge for more organic curves
+    const edgeLength = distance(current, next);
+    if (edgeLength > 40) { // Only for longer edges
+      const numIntermediatePoints = Math.floor(edgeLength / 60) + 1;
+      
+      for (let j = 1; j <= numIntermediatePoints; j++) {
+        const t = j / (numIntermediatePoints + 1);
+        const baseX = current.x + t * (next.x - current.x);
+        const baseY = current.y + t * (next.y - current.y);
+        
+        // Add natural curve variation
+        const edgeAngle = Math.atan2(next.y - current.y, next.x - current.x);
+        const perpAngle = edgeAngle + Math.PI / 2;
+        const curveAmount = (Math.random() - 0.5) * variationAmount * 0.6;
+        
+        const curvePoint = {
+          x: baseX + Math.cos(perpAngle) * curveAmount,
+          y: baseY + Math.sin(perpAngle) * curveAmount
+        };
+        
+        organic.push(curvePoint);
+      }
+    }
+  }
+  
+  // Smooth the organic vertices to create natural curves
+  return smoothVertices(organic);
+};
+
+// Smooth vertices to create natural, flowing curves
+const smoothVertices = (vertices: Point[]): Point[] => {
+  if (vertices.length < 3) return vertices;
+  
+  const smoothed: Point[] = [];
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const prev = vertices[(i - 1 + vertices.length) % vertices.length];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    // Apply weighted smoothing for natural curves
+    const smoothX = prev.x * 0.2 + curr.x * 0.6 + next.x * 0.2;
+    const smoothY = prev.y * 0.2 + curr.y * 0.6 + next.y * 0.2;
+    
+    smoothed.push({ x: smoothX, y: smoothY });
+  }
+  
+  return smoothed;
 };
 
 // Clip polygon by perpendicular bisector using Sutherland-Hodgman algorithm
