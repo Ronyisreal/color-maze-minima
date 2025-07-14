@@ -216,6 +216,8 @@ const generateMapRegions = (width: number, height: number, numRegions: number): 
         color: null,
         adjacentRegions: []
       });
+    } else {
+      console.warn('Degenerate cell for seed', i, seed, cellVertices);
     }
   }
   
@@ -242,6 +244,12 @@ const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height
   
   // Add organic variation to make shapes more natural and map-like
   const organicVertices = addOrganicVariation(clipVertices, seed);
+  
+  // Repair: If less than 3 points, fallback to the original clipVertices
+  if (organicVertices.length < 3) {
+    console.warn('Organic variation resulted in degenerate polygon, using original vertices');
+    return clipVertices;
+  }
   
   return organicVertices;
 };
@@ -293,7 +301,15 @@ const addOrganicVariation = (vertices: Point[], seed: Point): Point[] => {
   }
   
   // Smooth the organic vertices to create natural curves
-  return smoothVertices(organic);
+  const smoothed = smoothVertices(organic);
+  
+  // Ensure we still have enough vertices after smoothing
+  if (smoothed.length < 3) {
+    console.warn('Smoothing resulted in degenerate polygon, using original vertices');
+    return vertices;
+  }
+  
+  return smoothed;
 };
 
 // Smooth vertices to create natural, flowing curves

@@ -20,22 +20,26 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
   };
 
   const getFill = () => {
-    return block.color || '#ffffff';
+    return block.color || '#eee'; // visible gray for debugging
   };
 
   const renderShape = () => {
     const strokeWidth = isSelected ? 3 : 2;
     const className = "cursor-pointer hover:stroke-gray-800 transition-all duration-200";
 
+    // Debug logging
+    console.log('Region', block.id, 'vertices:', block.vertices.length, block.vertices);
+
     const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
     return (
       <polygon
         points={points}
         fill={getFill()}
-        stroke={getStroke()}
+        stroke="#333"
         strokeWidth={strokeWidth}
         className={className}
         onClick={handleClick}
+        opacity={0.7}
       />
     );
   };
