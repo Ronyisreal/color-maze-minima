@@ -412,9 +412,7 @@ export const GameBoard: React.FC = () => {
           </h1>
           <p className="text-gray-600">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
           <div className="flex justify-center items-center gap-6 mt-4">
-            {totalScore > 0 && (
-              <span className="text-lg font-semibold text-purple-600">Total Score: {totalScore}</span>
-            )}
+            <span className="text-lg font-semibold text-purple-600">Total Score: {regions.length * 10}</span>
             <div className="flex items-center gap-2">
               <Timer className="w-5 h-5 text-blue-600" />
               <span className={`text-lg font-bold transition-colors duration-300 ${
