@@ -20,18 +20,22 @@ export interface DifficultyConfig {
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export const getDifficultyConfig = (difficulty: Difficulty, level: number): DifficultyConfig => {
+  console.log('getDifficultyConfig called with:', { difficulty, level });
   const baseConfigs = {
     easy: { numRegions: 4 + Math.floor(Math.random() * 3), minColors: 3, complexity: 0.3 }, // 4-6 regions
-    medium: { numRegions: 7 + Math.floor(Math.random() * 4), minColors: 4, complexity: 0.5 }, // 7-10 regions
+    medium: { numRegions: 7 + Math.floor(Math.random() * 4), minColors: 4, complexity: 0.5 }, // 7-10 regions  
     hard: { numRegions: 11 + Math.floor(Math.random() * 5), minColors: 5, complexity: 0.7 } // 11-15 regions
   };
   
   const config = baseConfigs[difficulty];
-  return {
-    numRegions: config.numRegions,
+  const finalConfig = {
+    numRegions: Math.max(4, config.numRegions), // Ensure minimum 4 regions
     minColors: config.minColors,
     complexity: Math.min(config.complexity + (level - 1) * 0.05, 0.9)
   };
+  
+  console.log('Final difficulty config:', finalConfig);
+  return finalConfig;
 };
 
 const distance = (p1: Point, p2: Point): number => {
@@ -372,7 +376,12 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
 };
 
 const generateRobustRegions = (width: number, height: number, numRegions: number, difficulty: Difficulty): Region[] => {
+  console.log('generateRobustRegions called with:', { width, height, numRegions, difficulty });
   const regions: Region[] = [];
+  
+  // Ensure minimum regions
+  const actualNumRegions = Math.max(4, numRegions);
+  console.log('Using actualNumRegions:', actualNumRegions);
   
   // Create world map-like regions using Voronoi with geographical constraints
   const margin = 30;
@@ -389,17 +398,17 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
   ];
   
   // Distribute regions around continent centers
-  let regionsPerContinent = Math.ceil(numRegions / continentCenters.length);
+  let regionsPerContinent = Math.ceil(actualNumRegions / continentCenters.length);
   let regionCount = 0;
   
   for (const continent of continentCenters) {
-    if (regionCount >= numRegions) break;
+    if (regionCount >= actualNumRegions) break;
     
-    const remainingRegions = numRegions - regionCount;
+    const remainingRegions = actualNumRegions - regionCount;
     const currentContinentRegions = Math.min(regionsPerContinent, remainingRegions);
     
     for (let i = 0; i < currentContinentRegions; i++) {
-      const angle = (i / currentContinentRegions) * 2 * Math.PI;
+      const angle = (i / Math.max(1, currentContinentRegions)) * 2 * Math.PI;
       const radius = 50 + Math.random() * 80; // Vary distance from continent center
       const angleJitter = (Math.random() - 0.5) * Math.PI / 2;
       
@@ -415,6 +424,16 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
     }
   }
   
+  console.log('Generated seeds:', seeds.length);
+  
+  // Fallback: if we don't have enough seeds, add more randomly
+  while (seeds.length < actualNumRegions) {
+    seeds.push({
+      x: margin + Math.random() * (width - 2 * margin),
+      y: margin + Math.random() * (height - 2 * margin)
+    });
+  }
+  
   // Create geographical-looking regions using modified Voronoi
   for (let i = 0; i < seeds.length; i++) {
     const seed = seeds[i];
@@ -428,6 +447,8 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
         color: null,
         adjacentRegions: []
       });
+    } else {
+      console.warn('Invalid region created for seed', i, vertices.length, 'vertices');
     }
   }
   

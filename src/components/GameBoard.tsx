@@ -242,6 +242,7 @@ export const GameBoard: React.FC = () => {
   };
 
   const changeDifficulty = (newDifficulty: Difficulty) => {
+    console.log('changeDifficulty called with:', newDifficulty);
     setDifficulty(newDifficulty);
     setLevel(1);
     setTotalScore(0);
@@ -251,7 +252,12 @@ export const GameBoard: React.FC = () => {
     setGameStarted(false);
     setScore(null);
     setTimeLeft(getTimeLimit(newDifficulty));
-    generateNewPuzzle(newDifficulty, 1);
+    
+    // Use setTimeout to ensure state updates are processed
+    setTimeout(() => {
+      console.log('Generating puzzle for new difficulty:', newDifficulty);
+      generateNewPuzzle(newDifficulty, 1);
+    }, 0);
   };
 
   const formatTime = (seconds: number) => {
