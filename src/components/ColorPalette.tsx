@@ -20,13 +20,17 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
   selectedColor,
   onColorSelect,
 }) => {
+  const getColorClass = (colorName: string) => {
+    return colorName.toLowerCase();
+  };
+
   return (
     <div className="grid grid-cols-2 gap-2">
       {colors.map((color) => (
         <Button
           key={color.value}
           variant={selectedColor === color.value ? "default" : "outline"}
-          className="h-12 relative overflow-hidden group"
+          className={`h-12 relative overflow-hidden group color-option ${getColorClass(color.name)}`}
           onClick={() => onColorSelect(color.value)}
           style={{
             backgroundColor: selectedColor === color.value ? color.value : 'transparent',
@@ -35,7 +39,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
           }}
         >
           <div
-            className="absolute inset-1 rounded"
+            className="absolute inset-1 rounded transition-all duration-300"
             style={{ backgroundColor: color.value }}
           />
           <div className="relative z-10 flex items-center justify-center w-full h-full">
@@ -44,7 +48,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
             )}
           </div>
           <span
-            className="absolute bottom-0 left-0 right-0 text-xs font-medium text-center py-1 text-white bg-black bg-opacity-50"
+            className="absolute bottom-0 left-0 right-0 text-xs font-medium text-center py-1 text-white bg-black bg-opacity-50 transition-opacity duration-300"
           >
             {color.name}
           </span>
