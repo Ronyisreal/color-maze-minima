@@ -61,7 +61,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
   return (
     <div className="space-y-6 animate-fade-in">
       <h3 className="font-bold text-xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-        <Trophy className="w-6 h-6 text-purple-600 animate-pulse" />
+        <Trophy className="w-6 h-6 text-purple-600 animate-bounce" />
         Game Stats
       </h3>
       
