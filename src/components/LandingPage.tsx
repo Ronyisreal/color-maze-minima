@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Mario3D } from './Mario3D';
 
 export const LandingPage: React.FC = () => {
   const [marioVisible, setMarioVisible] = useState(false);
@@ -16,21 +15,23 @@ export const LandingPage: React.FC = () => {
 
   return (
     <div className="landing-container">
-      {/* Animated Background with UFOs */}
-      <div className="landing-bg">
-        <div className="stars"></div>
-        <div className="ufo ufo-1"></div>
-        <div className="ufo ufo-2"></div>
-        <div className="ufo ufo-3"></div>
-        <div className="shooting-star shooting-star-1"></div>
-        <div className="shooting-star shooting-star-2"></div>
-      </div>
-
       {/* Main Content */}
       <div className="landing-content">
-        {/* 3D Super Mario Head */}
-        <div className={`mario-3d-wrapper ${marioVisible ? 'mario-visible' : ''}`}>
-          <Mario3D />
+        {/* Simple Mario Head (CSS-based) */}
+        <div className={`mario-head ${marioVisible ? 'mario-visible' : ''}`}>
+          <div className="mario-cap">
+            <div className="cap-main"></div>
+            <div className="cap-visor"></div>
+            <div className="mario-logo">M</div>
+          </div>
+          <div className="mario-face">
+            <div className="mario-eyes">
+              <div className="eye left-eye"></div>
+              <div className="eye right-eye"></div>
+            </div>
+            <div className="mario-nose"></div>
+            <div className="mario-mustache"></div>
+          </div>
         </div>
 
         {/* Welcome Text */}
