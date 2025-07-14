@@ -272,28 +272,9 @@ export const GameBoard: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+    <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-4xl colorful-title mb-2">
-            <span className="letter">C</span>
-            <span className="letter">O</span>
-            <span className="letter">L</span>
-            <span className="letter">O</span>
-            <span className="letter">R</span>
-            <span className="letter mr-4"> </span>
-            <span className="letter">M</span>
-            <span className="letter">A</span>
-            <span className="letter">Z</span>
-            <span className="letter">E</span>
-            <span className="letter mr-4"> </span>
-            <span className="letter">M</span>
-            <span className="letter">I</span>
-            <span className="letter">N</span>
-            <span className="letter">I</span>
-            <span className="letter">M</span>
-            <span className="letter">A</span>
-          </h1>
           <p className="text-gray-600">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
           <div className="flex justify-center items-center gap-6 mt-4">
             <span className="text-lg font-semibold text-purple-600">Total Score: {regions.length * 10}</span>

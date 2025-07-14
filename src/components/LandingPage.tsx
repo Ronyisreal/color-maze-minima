@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { Mario3D } from './Mario3D';
 
 export const LandingPage: React.FC = () => {
   const [marioVisible, setMarioVisible] = useState(false);
@@ -27,21 +28,9 @@ export const LandingPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="landing-content">
-        {/* Super Mario Head */}
-        <div className={`mario-head ${marioVisible ? 'mario-visible' : ''}`}>
-          <div className="mario-cap">
-            <div className="cap-main"></div>
-            <div className="cap-visor"></div>
-            <div className="mario-logo">M</div>
-          </div>
-          <div className="mario-face">
-            <div className="mario-eyes">
-              <div className="eye left-eye"></div>
-              <div className="eye right-eye"></div>
-            </div>
-            <div className="mario-nose"></div>
-            <div className="mario-mustache"></div>
-          </div>
+        {/* 3D Super Mario Head */}
+        <div className={`mario-3d-wrapper ${marioVisible ? 'mario-visible' : ''}`}>
+          <Mario3D />
         </div>
 
         {/* Welcome Text */}
