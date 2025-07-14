@@ -66,12 +66,9 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
                 <div className="flex-1 text-left min-w-0">
                   <div className="font-medium text-sm">{difficulty.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {difficulty.blocks} blocks, {difficulty.description}
+                    {difficulty.blocks} blocks
                   </div>
                 </div>
-                <Badge variant="secondary" className="text-xs flex-shrink-0">
-                  {difficulty.blocks}
-                </Badge>
               </div>
             </Button>
           );
