@@ -144,65 +144,74 @@ const findAdjacencies = (regions: Region[]): void => {
   }
 };
 
-// Generate regions using Voronoi-like approach for proper map-like adjacency
+// Generate regions using Voronoi diagram for proper map-like tessellation
 const generateMapRegions = (width: number, height: number, numRegions: number): Region[] => {
   const regions: Region[] = [];
-  const margin = 50;
+  const margin = 60;
   const seeds: Point[] = [];
   
-  // Generate seed points for regions using better distribution
-  for (let i = 0; i < numRegions; i++) {
-    let attempts = 0;
-    let validSeed = false;
+  // Generate well-distributed seed points using Poisson disk sampling
+  const minDistance = Math.min(width, height) / Math.sqrt(numRegions) * 0.7;
+  let attempts = 0;
+  
+  while (seeds.length < numRegions && attempts < numRegions * 50) {
+    const candidate = {
+      x: margin + Math.random() * (width - 2 * margin),
+      y: margin + Math.random() * (height - 2 * margin)
+    };
     
-    while (!validSeed && attempts < 50) {
-      const seed = {
+    // Check minimum distance to existing seeds
+    let validSeed = true;
+    for (const seed of seeds) {
+      if (distance(candidate, seed) < minDistance) {
+        validSeed = false;
+        break;
+      }
+    }
+    
+    if (validSeed) {
+      seeds.push(candidate);
+    }
+    attempts++;
+  }
+  
+  // Fill remaining seeds with relaxed constraints if needed
+  while (seeds.length < numRegions) {
+    const relaxedDistance = minDistance * 0.6;
+    let placed = false;
+    
+    for (let attempt = 0; attempt < 100 && !placed; attempt++) {
+      const candidate = {
         x: margin + Math.random() * (width - 2 * margin),
         y: margin + Math.random() * (height - 2 * margin)
       };
       
-      // Ensure minimum distance between seeds
-      const minDistance = Math.min(width, height) / Math.sqrt(numRegions) * 0.8;
-      validSeed = seeds.every(existing => distance(seed, existing) >= minDistance);
-      
-      if (validSeed) {
-        seeds.push(seed);
-      }
-      attempts++;
-    }
-  }
-  
-  // If we couldn't place enough seeds, fill remaining with grid-based approach
-  while (seeds.length < numRegions) {
-    const gridSize = Math.ceil(Math.sqrt(numRegions - seeds.length));
-    const cellWidth = (width - 2 * margin) / gridSize;
-    const cellHeight = (height - 2 * margin) / gridSize;
-    
-    for (let row = 0; row < gridSize && seeds.length < numRegions; row++) {
-      for (let col = 0; col < gridSize && seeds.length < numRegions; col++) {
-        const seed = {
-          x: margin + (col + 0.3 + Math.random() * 0.4) * cellWidth,
-          y: margin + (row + 0.3 + Math.random() * 0.4) * cellHeight
-        };
-        
-        // Check if this position is too close to existing seeds
-        const minDistance = Math.min(cellWidth, cellHeight) * 0.6;
-        if (seeds.every(existing => distance(seed, existing) >= minDistance)) {
-          seeds.push(seed);
+      let validSeed = true;
+      for (const seed of seeds) {
+        if (distance(candidate, seed) < relaxedDistance) {
+          validSeed = false;
+          break;
         }
       }
+      
+      if (validSeed) {
+        seeds.push(candidate);
+        placed = true;
+      }
     }
+    
+    if (!placed) break; // Prevent infinite loop
   }
   
-  // Create regions using simplified Voronoi approach
+  // Create Voronoi cells for each seed
   for (let i = 0; i < seeds.length; i++) {
     const seed = seeds[i];
-    const vertices = generateVoronoiCell(seed, seeds, width, height, margin);
+    const cellVertices = createVoronoiCell(seed, seeds, width, height);
     
-    if (vertices.length >= 3) {
+    if (cellVertices.length >= 3) {
       regions.push({
         id: `region-${i + 1}`,
-        vertices: vertices,
+        vertices: cellVertices,
         center: seed,
         color: null,
         adjacentRegions: []
@@ -213,155 +222,105 @@ const generateMapRegions = (width: number, height: number, numRegions: number): 
   return regions;
 };
 
-// Generate a Voronoi cell for a seed point
-const generateVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number, margin: number): Point[] => {
-  const vertices: Point[] = [];
-  const angles: number[] = [];
-  
-  // Create vertices by finding intersection points
-  const numRays = 24; // Number of rays to cast from seed
-  
-  for (let i = 0; i < numRays; i++) {
-    const angle = (2 * Math.PI * i) / numRays;
-    const ray = { x: Math.cos(angle), y: Math.sin(angle) };
-    
-    // Find closest intersection with boundaries or other regions
-    let minDistance = Math.min(width, height);
-    
-    // Check boundaries
-    const boundaryIntersections = [
-      intersectRayWithBoundary(seed, ray, 0, 0, width, height), // boundaries
-    ].filter(p => p !== null) as Point[];
-    
-    for (const intersection of boundaryIntersections) {
-      const dist = distance(seed, intersection);
-      minDistance = Math.min(minDistance, dist);
-    }
-    
-    // Check perpendicular bisectors with other seeds
-    for (const otherSeed of allSeeds) {
-      if (otherSeed === seed) continue;
-      
-      const bisectorIntersection = intersectRayWithPerpBisector(seed, ray, seed, otherSeed);
-      if (bisectorIntersection) {
-        const dist = distance(seed, bisectorIntersection);
-        if (dist > 10 && dist < minDistance) { // Minimum distance check
-          minDistance = dist;
-        }
-      }
-    }
-    
-    // Create vertex at the intersection point
-    const vertex = {
-      x: seed.x + ray.x * minDistance * 0.9, // Slightly reduce to avoid edge issues
-      y: seed.y + ray.y * minDistance * 0.9
-    };
-    
-    vertices.push(vertex);
-    angles.push(angle);
-  }
-  
-  // Sort vertices by angle and remove duplicates
-  const sortedVertices = vertices
-    .map((v, i) => ({ vertex: v, angle: angles[i] }))
-    .sort((a, b) => a.angle - b.angle)
-    .map(item => item.vertex);
-  
-  // Remove vertices that are too close to each other
-  const filteredVertices: Point[] = [];
-  const minVertexDistance = 15;
-  
-  for (let i = 0; i < sortedVertices.length; i++) {
-    const current = sortedVertices[i];
-    const next = sortedVertices[(i + 1) % sortedVertices.length];
-    
-    if (distance(current, next) >= minVertexDistance) {
-      filteredVertices.push(current);
-    }
-  }
-  
-  return filteredVertices.length >= 3 ? filteredVertices : [];
-};
-
-// Intersect ray with rectangular boundary
-const intersectRayWithBoundary = (origin: Point, ray: Point, x1: number, y1: number, x2: number, y2: number): Point | null => {
-  const intersections: Point[] = [];
-  
-  // Check intersection with each boundary
-  const boundaries = [
-    { start: { x: x1, y: y1 }, end: { x: x2, y: y1 } }, // top
-    { start: { x: x2, y: y1 }, end: { x: x2, y: y2 } }, // right
-    { start: { x: x2, y: y2 }, end: { x: x1, y: y2 } }, // bottom
-    { start: { x: x1, y: y2 }, end: { x: x1, y: y1 } }  // left
+// Create a Voronoi cell using the half-plane intersection method
+const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
+  // Start with the bounding rectangle
+  let clipVertices: Point[] = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height }
   ];
   
-  for (const boundary of boundaries) {
-    const intersection = intersectRayWithSegment(origin, ray, boundary.start, boundary.end);
-    if (intersection) {
-      intersections.push(intersection);
+  // Clip against each bisector
+  for (const otherSeed of allSeeds) {
+    if (otherSeed === seed) continue;
+    
+    clipVertices = clipPolygonByBisector(clipVertices, seed, otherSeed);
+    if (clipVertices.length < 3) break; // Polygon too small
+  }
+  
+  return clipVertices;
+};
+
+// Clip polygon by perpendicular bisector using Sutherland-Hodgman algorithm
+const clipPolygonByBisector = (vertices: Point[], seed1: Point, seed2: Point): Point[] => {
+  if (vertices.length === 0) return [];
+  
+  // Calculate perpendicular bisector
+  const midpoint = {
+    x: (seed1.x + seed2.x) / 2,
+    y: (seed1.y + seed2.y) / 2
+  };
+  
+  const normal = {
+    x: seed2.x - seed1.x,
+    y: seed2.y - seed1.y
+  };
+  
+  const result: Point[] = [];
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const current = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    const currentSide = isPointOnSide(current, midpoint, normal, seed1);
+    const nextSide = isPointOnSide(next, midpoint, normal, seed1);
+    
+    if (currentSide) {
+      if (!nextSide) {
+        // Leaving the valid side - add intersection
+        const intersection = findBisectorIntersection(current, next, midpoint, normal);
+        if (intersection) result.push(intersection);
+      }
+    } else {
+      if (nextSide) {
+        // Entering the valid side - add intersection and next point
+        const intersection = findBisectorIntersection(current, next, midpoint, normal);
+        if (intersection) result.push(intersection);
+        result.push(next);
+      }
     }
   }
   
-  // Return the closest intersection
-  if (intersections.length === 0) return null;
-  
-  return intersections.reduce((closest, current) => {
-    const closestDist = distance(origin, closest);
-    const currentDist = distance(origin, current);
-    return currentDist < closestDist ? current : closest;
-  });
+  return result;
 };
 
-// Intersect ray with line segment
-const intersectRayWithSegment = (rayOrigin: Point, rayDirection: Point, segStart: Point, segEnd: Point): Point | null => {
-  const dx1 = rayDirection.x;
-  const dy1 = rayDirection.y;
-  const dx2 = segEnd.x - segStart.x;
-  const dy2 = segEnd.y - segStart.y;
+// Check which side of bisector a point is on (closer to seed1 or seed2)
+const isPointOnSide = (point: Point, bisectorPoint: Point, bisectorNormal: Point, seed1: Point): boolean => {
+  // Check if point is on the same side as seed1
+  const toPoint = { x: point.x - bisectorPoint.x, y: point.y - bisectorPoint.y };
+  const toSeed1 = { x: seed1.x - bisectorPoint.x, y: seed1.y - bisectorPoint.y };
   
-  const determinant = dx1 * dy2 - dy1 * dx2;
-  if (Math.abs(determinant) < 1e-10) return null; // Parallel lines
+  const pointDot = toPoint.x * bisectorNormal.x + toPoint.y * bisectorNormal.y;
+  const seed1Dot = toSeed1.x * bisectorNormal.x + toSeed1.y * bisectorNormal.y;
   
-  const dx3 = rayOrigin.x - segStart.x;
-  const dy3 = rayOrigin.y - segStart.y;
-  
-  const t1 = (dx2 * dy3 - dy2 * dx3) / determinant;
-  const t2 = (dx1 * dy3 - dy1 * dx3) / determinant;
-  
-  if (t1 >= 0 && t2 >= 0 && t2 <= 1) {
-    return {
-      x: rayOrigin.x + t1 * dx1,
-      y: rayOrigin.y + t1 * dy1
-    };
-  }
-  
-  return null;
+  return pointDot * seed1Dot >= 0;
 };
 
-// Intersect ray with perpendicular bisector of two points
-const intersectRayWithPerpBisector = (rayOrigin: Point, rayDirection: Point, point1: Point, point2: Point): Point | null => {
-  // Perpendicular bisector passes through midpoint and is perpendicular to line between points
-  const midpoint = {
-    x: (point1.x + point2.x) / 2,
-    y: (point1.y + point2.y) / 2
-  };
+// Find intersection of line segment with bisector
+const findBisectorIntersection = (p1: Point, p2: Point, bisectorPoint: Point, bisectorNormal: Point): Point | null => {
+  const lineDir = { x: p2.x - p1.x, y: p2.y - p1.y };
+  const lineLength = Math.sqrt(lineDir.x * lineDir.x + lineDir.y * lineDir.y);
   
-  const lineVector = { x: point2.x - point1.x, y: point2.y - point1.y };
-  const perpVector = { x: -lineVector.y, y: lineVector.x }; // Perpendicular vector
+  if (lineLength === 0) return null;
   
-  // Find intersection of ray with perpendicular bisector line
-  const determinant = rayDirection.x * perpVector.y - rayDirection.y * perpVector.x;
-  if (Math.abs(determinant) < 1e-10) return null; // Parallel
+  // Normalize line direction
+  lineDir.x /= lineLength;
+  lineDir.y /= lineLength;
   
-  const dx = midpoint.x - rayOrigin.x;
-  const dy = midpoint.y - rayOrigin.y;
+  // Find intersection parameter
+  const denominator = lineDir.x * bisectorNormal.x + lineDir.y * bisectorNormal.y;
+  if (Math.abs(denominator) < 1e-10) return null; // Parallel
   
-  const t = (dx * perpVector.y - dy * perpVector.x) / determinant;
+  const toBisector = { x: bisectorPoint.x - p1.x, y: bisectorPoint.y - p1.y };
+  const t = (toBisector.x * bisectorNormal.x + toBisector.y * bisectorNormal.y) / denominator;
   
-  if (t >= 0) {
+  // Check if intersection is within line segment
+  if (t >= 0 && t <= lineLength) {
     return {
-      x: rayOrigin.x + t * rayDirection.x,
-      y: rayOrigin.y + t * rayDirection.y
+      x: p1.x + t * lineDir.x,
+      y: p1.y + t * lineDir.y
     };
   }
   

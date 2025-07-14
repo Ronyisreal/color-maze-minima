@@ -48,8 +48,11 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
         y={block.center.y}
         textAnchor="middle"
         dominantBaseline="middle"
-        className="text-xs font-semibold pointer-events-none select-none"
-        fill={block.color ? '#ffffff' : '#374151'}
+        className="text-lg font-bold pointer-events-none select-none"
+        fill={block.color ? '#ffffff' : '#1f2937'}
+        stroke={block.color ? '#000000' : '#ffffff'}
+        strokeWidth="0.5"
+        style={{ fontSize: '18px', fontWeight: 'bold' }}
       >
         {block.id.split('-')[1]}
       </text>
