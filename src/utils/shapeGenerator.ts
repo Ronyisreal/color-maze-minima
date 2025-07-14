@@ -93,37 +93,35 @@ const calculateCentroid = (vertices: Point[]): Point => {
   return { x, y };
 };
 
-// Generate a connected region that shares a border with an existing region
+// Generate a connected region that shares exact borders with an existing region
 const generateConnectedRegion = (existingRegion: Region, size: number, complexity: number, shapeIndex: number, boardWidth: number, boardHeight: number): Point[] | null => {
-  // Find a good edge segment to connect to
   const vertices = existingRegion.vertices;
   const numVertices = vertices.length;
   
   // Try multiple edge segments to find a good connection point
-  for (let attempts = 0; attempts < 5; attempts++) {
+  for (let attempts = 0; attempts < 8; attempts++) {
     const edgeIndex = Math.floor(Math.random() * numVertices);
     const edgeStart = vertices[edgeIndex];
     const edgeEnd = vertices[(edgeIndex + 1) % numVertices];
     
-    // Calculate connection point along the edge (not at endpoints)
-    const t = 0.3 + Math.random() * 0.4; // Between 30% and 70% along the edge
-    const connectionPoint = {
-      x: edgeStart.x + (edgeEnd.x - edgeStart.x) * t,
-      y: edgeStart.y + (edgeEnd.y - edgeStart.y) * t
-    };
-    
-    // Calculate direction perpendicular to the edge (outward)
+    // Calculate edge vector and normal
     const edgeVector = { x: edgeEnd.x - edgeStart.x, y: edgeEnd.y - edgeStart.y };
     const edgeLength = Math.sqrt(edgeVector.x * edgeVector.x + edgeVector.y * edgeVector.y);
     
-    if (edgeLength === 0) continue;
+    if (edgeLength < 20) continue; // Skip very short edges
     
+    // Calculate outward normal
     const edgeNormal = { x: -edgeVector.y / edgeLength, y: edgeVector.x / edgeLength };
     
-    // Determine which side is outward (away from existing region center)
+    // Determine which side is outward
+    const edgeMidpoint = {
+      x: (edgeStart.x + edgeEnd.x) / 2,
+      y: (edgeStart.y + edgeEnd.y) / 2
+    };
+    
     const toCenter = { 
-      x: existingRegion.center.x - connectionPoint.x, 
-      y: existingRegion.center.y - connectionPoint.y 
+      x: existingRegion.center.x - edgeMidpoint.x, 
+      y: existingRegion.center.y - edgeMidpoint.y 
     };
     const dotProduct = edgeNormal.x * toCenter.x + edgeNormal.y * toCenter.y;
     
@@ -132,25 +130,89 @@ const generateConnectedRegion = (existingRegion: Region, size: number, complexit
       edgeNormal.y = -edgeNormal.y;
     }
     
-    // Position new region center along the outward normal
-    const centerDistance = size * 0.6; // Overlap for connection
+    // Position new region center
+    const centerDistance = size * 0.7;
     const newCenter = {
-      x: connectionPoint.x + edgeNormal.x * centerDistance,
-      y: connectionPoint.y + edgeNormal.y * centerDistance
+      x: edgeMidpoint.x + edgeNormal.x * centerDistance,
+      y: edgeMidpoint.y + edgeNormal.y * centerDistance
     };
     
-    // Check bounds
-    const margin = size;
+    // Check bounds with better margins
+    const margin = size * 0.8;
     if (newCenter.x < margin || newCenter.x > boardWidth - margin ||
         newCenter.y < margin || newCenter.y > boardHeight - margin) {
       continue;
     }
     
-    // Generate the new region shape
-    return generateOrganicShape(newCenter, size, complexity, shapeIndex);
+    // Generate new region shape
+    const newVertices = generateOrganicShape(newCenter, size, complexity, shapeIndex);
+    
+    // Force shared border by replacing some vertices of new region with existing edge
+    const sharedVertices = createSharedBorder(newVertices, edgeStart, edgeEnd, newCenter);
+    
+    return sharedVertices;
   }
   
   return null;
+};
+
+// Create a shared border between regions by aligning vertices
+const createSharedBorder = (newVertices: Point[], sharedEdgeStart: Point, sharedEdgeEnd: Point, regionCenter: Point): Point[] => {
+  const result: Point[] = [];
+  
+  // Find vertices that should be part of the shared edge
+  const edgeVector = { x: sharedEdgeEnd.x - sharedEdgeStart.x, y: sharedEdgeEnd.y - sharedEdgeStart.y };
+  const edgeLength = Math.sqrt(edgeVector.x * edgeVector.x + edgeVector.y * edgeVector.y);
+  
+  if (edgeLength === 0) return newVertices;
+  
+  const normalizedEdge = { x: edgeVector.x / edgeLength, y: edgeVector.y / edgeLength };
+  
+  // Find vertices close to the shared edge line
+  const sharedVertexIndices: number[] = [];
+  const tolerance = 30;
+  
+  newVertices.forEach((vertex, index) => {
+    const distToEdge = distancePointToLineSegment(vertex, sharedEdgeStart, sharedEdgeEnd);
+    if (distToEdge < tolerance) {
+      sharedVertexIndices.push(index);
+    }
+  });
+  
+  // If we found vertices near the shared edge, replace them with points along the shared edge
+  if (sharedVertexIndices.length >= 2) {
+    const sortedIndices = sharedVertexIndices.sort((a, b) => a - b);
+    
+    // Create the shared edge points
+    const numSharedPoints = Math.min(4, sortedIndices.length);
+    const sharedPoints: Point[] = [];
+    
+    for (let i = 0; i < numSharedPoints; i++) {
+      const t = i / (numSharedPoints - 1);
+      sharedPoints.push({
+        x: sharedEdgeStart.x + t * edgeVector.x,
+        y: sharedEdgeStart.y + t * edgeVector.y
+      });
+    }
+    
+    // Replace the vertices
+    for (let i = 0; i < newVertices.length; i++) {
+      if (sortedIndices.includes(i)) {
+        const sharedPointIndex = sortedIndices.indexOf(i);
+        if (sharedPointIndex < sharedPoints.length) {
+          result.push(sharedPoints[sharedPointIndex]);
+        } else {
+          result.push(newVertices[i]);
+        }
+      } else {
+        result.push(newVertices[i]);
+      }
+    }
+    
+    return result;
+  }
+  
+  return newVertices;
 };
 
 // Check if two regions actually share a border (have overlapping edges)
