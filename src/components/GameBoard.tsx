@@ -106,147 +106,15 @@ export const GameBoard: React.FC = () => {
     return maxColor;
   };
 
-  // Fixed border detection logic - checks if two regions actually share a border
-  const doRegionsShareBorder = (region1: Region, region2: Region): boolean => {
-    const tolerance = 5; // Small tolerance for floating point precision
-    
-    // Check if any edge of region1 overlaps with any edge of region2
-    for (let i = 0; i < region1.vertices.length; i++) {
-      const edge1Start = region1.vertices[i];
-      const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
-      
-      for (let j = 0; j < region2.vertices.length; j++) {
-        const edge2Start = region2.vertices[j];
-        const edge2End = region2.vertices[(j + 1) % region2.vertices.length];
-        
-        // Check if edges overlap significantly (not just touch at a point)
-        if (doEdgesOverlapSignificantly(edge1Start, edge1End, edge2Start, edge2End, tolerance)) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  };
-
-  // Check if two line segments overlap significantly (share a common line segment)
-  const doEdgesOverlapSignificantly = (
-    line1Start: { x: number; y: number },
-    line1End: { x: number; y: number },
-    line2Start: { x: number; y: number },
-    line2End: { x: number; y: number },
-    tolerance: number
-  ): boolean => {
-    // Check if the lines are parallel and close to each other
-    const line1Vector = { x: line1End.x - line1Start.x, y: line1End.y - line1Start.y };
-    const line2Vector = { x: line2End.x - line2Start.x, y: line2End.y - line2Start.y };
-    
-    // Normalize vectors
-    const line1Length = Math.sqrt(line1Vector.x * line1Vector.x + line1Vector.y * line1Vector.y);
-    const line2Length = Math.sqrt(line2Vector.x * line2Vector.x + line2Vector.y * line2Vector.y);
-    
-    if (line1Length === 0 || line2Length === 0) return false;
-    
-    const line1Normalized = { x: line1Vector.x / line1Length, y: line1Vector.y / line1Length };
-    const line2Normalized = { x: line2Vector.x / line2Length, y: line2Vector.y / line2Length };
-    
-    // Check if lines are parallel (dot product close to 1 or -1)
-    const dotProduct = Math.abs(line1Normalized.x * line2Normalized.x + line1Normalized.y * line2Normalized.y);
-    
-    if (dotProduct < 0.9) return false; // Not parallel enough
-    
-    // Check if the lines are close to each other
-    const distanceStart1ToLine2 = distancePointToLineSegment(line1Start, line2Start, line2End);
-    const distanceEnd1ToLine2 = distancePointToLineSegment(line1End, line2Start, line2End);
-    const distanceStart2ToLine1 = distancePointToLineSegment(line2Start, line1Start, line1End);
-    const distanceEnd2ToLine1 = distancePointToLineSegment(line2End, line1Start, line1End);
-    
-    // If any point is close to the other line, check for overlap
-    if (distanceStart1ToLine2 < tolerance || distanceEnd1ToLine2 < tolerance ||
-        distanceStart2ToLine1 < tolerance || distanceEnd2ToLine1 < tolerance) {
-      
-      // Check if there's actual overlap (not just touching at endpoints)
-      const overlapLength = calculateOverlapLength(line1Start, line1End, line2Start, line2End);
-      return overlapLength > tolerance;
-    }
-    
-    return false;
-  };
-
-  // Calculate the length of overlap between two line segments
-  const calculateOverlapLength = (
-    line1Start: { x: number; y: number },
-    line1End: { x: number; y: number },
-    line2Start: { x: number; y: number },
-    line2End: { x: number; y: number }
-  ): number => {
-    // Project all points onto the line direction
-    const direction = { 
-      x: line1End.x - line1Start.x, 
-      y: line1End.y - line1Start.y 
-    };
-    const length = Math.sqrt(direction.x * direction.x + direction.y * direction.y);
-    
-    if (length === 0) return 0;
-    
-    const unit = { x: direction.x / length, y: direction.y / length };
-    
-    // Project all points onto the line
-    const proj1Start = 0;
-    const proj1End = length;
-    const proj2Start = (line2Start.x - line1Start.x) * unit.x + (line2Start.y - line1Start.y) * unit.y;
-    const proj2End = (line2End.x - line1Start.x) * unit.x + (line2End.y - line1Start.y) * unit.y;
-    
-    // Find overlap
-    const overlapStart = Math.max(proj1Start, Math.min(proj2Start, proj2End));
-    const overlapEnd = Math.min(proj1End, Math.max(proj2Start, proj2End));
-    
-    return Math.max(0, overlapEnd - overlapStart);
-  };
-
-  const distancePointToLineSegment = (point: { x: number; y: number }, lineStart: { x: number; y: number }, lineEnd: { x: number; y: number }): number => {
-    const A = point.x - lineStart.x;
-    const B = point.y - lineStart.y;
-    const C = lineEnd.x - lineStart.x;
-    const D = lineEnd.y - lineStart.y;
-
-    const dot = A * C + B * D;
-    const lenSq = C * C + D * D;
-    
-    if (lenSq === 0) {
-      return Math.sqrt(A * A + B * B);
-    }
-    
-    const param = dot / lenSq;
-    
-    let xx, yy;
-    
-    if (param < 0) {
-      xx = lineStart.x;
-      yy = lineStart.y;
-    } else if (param > 1) {
-      xx = lineEnd.x;
-      yy = lineEnd.y;
-    } else {
-      xx = lineStart.x + param * C;
-      yy = lineStart.y + param * D;
-    }
-    
-    const dx = point.x - xx;
-    const dy = point.y - yy;
-    
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
   const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
     const currentRegion = allRegions.find(r => r.id === regionId);
     if (!currentRegion) return false;
     
-    const sameColorRegions = allRegions.filter(r => r.color === color && r.id !== regionId);
-    
-    for (const sameColorRegion of sameColorRegions) {
-      if (doRegionsShareBorder(currentRegion, sameColorRegion)) {
-        console.log(`Conflict detected: Region ${regionId} conflicts with region ${sameColorRegion.id}`);
+    // Use the adjacency information already calculated during region generation
+    for (const adjacentId of currentRegion.adjacentRegions) {
+      const adjacentRegion = allRegions.find(r => r.id === adjacentId);
+      if (adjacentRegion && adjacentRegion.color === color) {
+        console.log(`Conflict detected: Region ${regionId} conflicts with adjacent region ${adjacentId}`);
         return true;
       }
     }

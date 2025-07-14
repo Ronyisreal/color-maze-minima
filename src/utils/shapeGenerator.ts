@@ -363,40 +363,118 @@ const findBisectorIntersection = (p1: Point, p2: Point, bisectorPoint: Point, bi
 };
 
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
+  console.log('Starting robust shape generation...', { width, height, difficulty });
+  
   const config = getDifficultyConfig(difficulty, 1);
   
-  // Generate proper map-like regions using clean Voronoi approach
-  const regions = generateMapRegions(width, height, config.numRegions);
+  // Use robust grid-based generation instead of Voronoi
+  return generateRobustRegions(width, height, config.numRegions, difficulty);
+};
+
+const generateRobustRegions = (width: number, height: number, numRegions: number, difficulty: Difficulty): Region[] => {
+  const regions: Region[] = [];
   
-  // Find adjacencies between regions
-  findAdjacencies(regions);
+  // Create a reliable grid-based approach with organic variation
+  const cols = Math.ceil(Math.sqrt(numRegions * 1.3));
+  const rows = Math.ceil(numRegions / cols);
+  const cellWidth = width / cols;
+  const cellHeight = height / rows;
   
-  console.log(`Found ${regions.length} regions with adjacencies:`, 
-    regions.map(r => `${r.id}:${r.adjacentRegions.length}`).join(', '));
+  let regionCount = 0;
   
-  // Ensure connectivity - connect isolated regions
-  regions.forEach(region => {
-    if (region.adjacentRegions.length === 0) {
-      let closestRegion: Region | null = null;
-      let minDistance = Infinity;
+  for (let row = 0; row < rows && regionCount < numRegions; row++) {
+    for (let col = 0; col < cols && regionCount < numRegions; col++) {
+      const baseX = col * cellWidth;
+      const baseY = row * cellHeight;
       
-      regions.forEach(otherRegion => {
-        if (otherRegion.id !== region.id) {
-          const dist = distance(region.center, otherRegion.center);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closestRegion = otherRegion;
-          }
-        }
+      // Create slightly irregular rectangles with organic curves
+      const variation = Math.min(cellWidth, cellHeight) * 0.2;
+      const vertices = [];
+      
+      // Create more organic shapes with curves
+      const numVertices = 6 + Math.floor(Math.random() * 3); // 6-8 vertices for organic look
+      
+      for (let i = 0; i < numVertices; i++) {
+        const angle = (i / numVertices) * 2 * Math.PI;
+        const radiusX = cellWidth * 0.4 + (Math.random() - 0.5) * variation;
+        const radiusY = cellHeight * 0.4 + (Math.random() - 0.5) * variation;
+        
+        const x = baseX + cellWidth * 0.5 + Math.cos(angle) * radiusX;
+        const y = baseY + cellHeight * 0.5 + Math.sin(angle) * radiusY;
+        
+        vertices.push({
+          x: Math.max(5, Math.min(width - 5, x)),
+          y: Math.max(5, Math.min(height - 5, y))
+        });
+      }
+      
+      const center = calculateCentroid(vertices);
+      
+      regions.push({
+        id: `region-${regionCount + 1}`,
+        vertices,
+        center,
+        color: null,
+        adjacentRegions: []
       });
       
-      if (closestRegion) {
-        region.adjacentRegions.push(closestRegion.id);
-        closestRegion.adjacentRegions.push(region.id);
-        console.log(`Connected isolated region ${region.id} to ${closestRegion.id}`);
+      regionCount++;
+    }
+  }
+  
+  // Calculate adjacencies using robust border detection
+  regions.forEach((region, i) => {
+    region.adjacentRegions = [];
+    for (let j = 0; j < regions.length; j++) {
+      if (i !== j && areRegionsAdjacent(region, regions[j])) {
+        region.adjacentRegions.push(regions[j].id);
       }
     }
   });
   
+  console.log(`Generated ${regions.length} robust regions`);
+  const regionsWithAdjacencies = regions.filter(r => r.adjacentRegions.length > 0);
+  console.log(`Found ${regionsWithAdjacencies.length} regions with adjacencies:`, 
+    regionsWithAdjacencies.map(r => `${r.id}:${r.adjacentRegions.length}`).join(', '));
+  
   return regions;
+};
+
+const areRegionsAdjacent = (region1: Region, region2: Region): boolean => {
+  const tolerance = 20; // Increased tolerance for better connectivity
+  
+  // Check center-to-center distance first (quick rejection)
+  const centerDistance = distance(region1.center, region2.center);
+  const maxSize = Math.max(
+    Math.sqrt(region1.vertices.length) * 50,
+    Math.sqrt(region2.vertices.length) * 50
+  );
+  
+  if (centerDistance > maxSize) return false;
+  
+  // Check if any vertex of region1 is close to any edge of region2
+  for (const vertex1 of region1.vertices) {
+    for (let i = 0; i < region2.vertices.length; i++) {
+      const edgeStart = region2.vertices[i];
+      const edgeEnd = region2.vertices[(i + 1) % region2.vertices.length];
+      
+      if (distancePointToLineSegment(vertex1, edgeStart, edgeEnd) < tolerance) {
+        return true;
+      }
+    }
+  }
+  
+  // Check if any vertex of region2 is close to any edge of region1
+  for (const vertex2 of region2.vertices) {
+    for (let i = 0; i < region1.vertices.length; i++) {
+      const edgeStart = region1.vertices[i];
+      const edgeEnd = region1.vertices[(i + 1) % region1.vertices.length];
+      
+      if (distancePointToLineSegment(vertex2, edgeStart, edgeEnd) < tolerance) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
 };
