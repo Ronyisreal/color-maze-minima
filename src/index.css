@@ -305,7 +305,6 @@ All colors MUST be HSL.
     transform: scale(0) rotate(180deg);
     transition: all 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     margin-bottom: 3rem;
-    animation: bounce 2s ease-in-out infinite;
   }
   
   .mario-visible {
