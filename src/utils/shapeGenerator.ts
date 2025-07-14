@@ -21,14 +21,14 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export const getDifficultyConfig = (difficulty: Difficulty, level: number): DifficultyConfig => {
   const baseConfigs = {
-    easy: { numRegions: 8, minColors: 3, complexity: 0.3 },
-    medium: { numRegions: 12, minColors: 4, complexity: 0.5 },
-    hard: { numRegions: 16, minColors: 5, complexity: 0.7 }
+    easy: { numRegions: 4 + Math.floor(Math.random() * 3), minColors: 3, complexity: 0.3 }, // 4-6 regions
+    medium: { numRegions: 7 + Math.floor(Math.random() * 4), minColors: 4, complexity: 0.5 }, // 7-10 regions
+    hard: { numRegions: 11 + Math.floor(Math.random() * 5), minColors: 5, complexity: 0.7 } // 11-15 regions
   };
   
   const config = baseConfigs[difficulty];
   return {
-    numRegions: config.numRegions + Math.floor(level / 2),
+    numRegions: config.numRegions,
     minColors: config.minColors,
     complexity: Math.min(config.complexity + (level - 1) * 0.05, 0.9)
   };
@@ -38,21 +38,21 @@ const distance = (p1: Point, p2: Point): number => {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 };
 
-// Generate organic, curved shapes similar to the reference image
+// Generate organic, curved shapes with cleaner edges (no small extensions)
 const generateOrganicShape = (center: Point, size: number, complexity: number): Point[] => {
   const vertices: Point[] = [];
-  const numPoints = 16 + Math.floor(complexity * 12); // More points for smoother curves
+  const numPoints = 12 + Math.floor(complexity * 8); // Fewer points for cleaner shapes
   
   for (let i = 0; i < numPoints; i++) {
     const angle = (2 * Math.PI * i) / numPoints;
     
-    // Create organic variation in radius
-    const baseRadius = size * (0.6 + Math.random() * 0.4);
-    const organicVariation = Math.sin(angle * 3 + Math.random() * Math.PI) * size * 0.3;
+    // More controlled radius variation to prevent extensions
+    const baseRadius = size * (0.7 + Math.random() * 0.2); // Narrower range
+    const organicVariation = Math.sin(angle * 2) * size * 0.15; // Reduced variation
     const radius = baseRadius + organicVariation;
     
-    // Add some noise for more organic feel
-    const noise = (Math.random() - 0.5) * size * 0.2;
+    // Reduced noise for cleaner shapes
+    const noise = (Math.random() - 0.5) * size * 0.1; // Reduced from 0.2
     
     const x = center.x + Math.cos(angle) * (radius + noise);
     const y = center.y + Math.sin(angle) * (radius + noise);
