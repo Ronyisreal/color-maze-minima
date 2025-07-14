@@ -374,80 +374,74 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
 const generateRobustRegions = (width: number, height: number, numRegions: number, difficulty: Difficulty): Region[] => {
   const regions: Region[] = [];
   
-  // Create one big interconnected messy structure
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const maxRadius = Math.min(width, height) * 0.4;
+  // Create world map-like regions using Voronoi with geographical constraints
+  const margin = 30;
+  const seeds: Point[] = [];
   
-  // Generate interconnected regions in a spiral/web pattern
-  const angleStep = (2 * Math.PI) / numRegions;
-  const radiusStep = maxRadius / Math.ceil(numRegions / 6);
+  // Generate seed points distributed like continents/countries
+  const continentCenters = [
+    { x: width * 0.2, y: height * 0.3 }, // "North America"
+    { x: width * 0.15, y: height * 0.6 }, // "South America"
+    { x: width * 0.5, y: height * 0.25 }, // "Europe"
+    { x: width * 0.45, y: height * 0.5 }, // "Africa"
+    { x: width * 0.7, y: height * 0.3 }, // "Asia"
+    { x: width * 0.8, y: height * 0.7 }, // "Australia"
+  ];
   
+  // Distribute regions around continent centers
+  let regionsPerContinent = Math.ceil(numRegions / continentCenters.length);
   let regionCount = 0;
   
-  // Create concentric rings of connected regions
-  for (let ring = 0; ring < Math.ceil(numRegions / 6) && regionCount < numRegions; ring++) {
-    const ringRadius = (ring + 1) * radiusStep;
-    const regionsInRing = ring === 0 ? 1 : Math.min(6 + ring * 2, numRegions - regionCount);
+  for (const continent of continentCenters) {
+    if (regionCount >= numRegions) break;
     
-    for (let i = 0; i < regionsInRing && regionCount < numRegions; i++) {
-      const baseAngle = (i / regionsInRing) * 2 * Math.PI;
-      const angleVariation = (Math.random() - 0.5) * 0.3;
-      const angle = baseAngle + angleVariation;
+    const remainingRegions = numRegions - regionCount;
+    const currentContinentRegions = Math.min(regionsPerContinent, remainingRegions);
+    
+    for (let i = 0; i < currentContinentRegions; i++) {
+      const angle = (i / currentContinentRegions) * 2 * Math.PI;
+      const radius = 50 + Math.random() * 80; // Vary distance from continent center
+      const angleJitter = (Math.random() - 0.5) * Math.PI / 2;
       
-      const radiusVariation = (Math.random() - 0.5) * radiusStep * 0.4;
-      const radius = ring === 0 ? 0 : ringRadius + radiusVariation;
+      const x = continent.x + Math.cos(angle + angleJitter) * radius;
+      const y = continent.y + Math.sin(angle + angleJitter) * radius;
       
-      const regionCenterX = centerX + Math.cos(angle) * radius;
-      const regionCenterY = centerY + Math.sin(angle) * radius;
-      
-      // Create messy hand-drawn irregular shapes that overlap
-      const vertices = [];
-      const numVertices = 5 + Math.floor(Math.random() * 4); // 5-8 vertices
-      const baseSize = radiusStep * (0.8 + Math.random() * 0.6); // Overlapping sizes
-      
-      for (let v = 0; v < numVertices; v++) {
-        const vertexAngle = (v / numVertices) * 2 * Math.PI;
-        
-        // Add significant randomness for hand-drawn messy look
-        const radiusVariation = 0.5 + Math.random() * 0.8;
-        const angleJitter = (Math.random() - 0.5) * 0.4;
-        const vertexRadius = baseSize * radiusVariation;
-        
-        const x = regionCenterX + Math.cos(vertexAngle + angleJitter) * vertexRadius;
-        const y = regionCenterY + Math.sin(vertexAngle + angleJitter) * vertexRadius;
-        
-        vertices.push({
-          x: Math.max(10, Math.min(width - 10, x)),
-          y: Math.max(10, Math.min(height - 10, y))
-        });
-      }
-      
-      const center = calculateCentroid(vertices);
-      
-      regions.push({
-        id: `region-${regionCount + 1}`,
-        vertices,
-        center,
-        color: null,
-        adjacentRegions: []
+      seeds.push({
+        x: Math.max(margin, Math.min(width - margin, x)),
+        y: Math.max(margin, Math.min(height - margin, y))
       });
       
       regionCount++;
     }
   }
   
-  // Ensure all regions are connected by making adjacency very generous
+  // Create geographical-looking regions using modified Voronoi
+  for (let i = 0; i < seeds.length; i++) {
+    const seed = seeds[i];
+    const vertices = createGeographicalRegion(seed, seeds, width, height, i);
+    
+    if (vertices.length >= 3) {
+      regions.push({
+        id: `region-${i + 1}`,
+        vertices,
+        center: seed,
+        color: null,
+        adjacentRegions: []
+      });
+    }
+  }
+  
+  // Calculate adjacencies for map-like connectivity
   regions.forEach((region, i) => {
     region.adjacentRegions = [];
     for (let j = 0; j < regions.length; j++) {
-      if (i !== j && areRegionsConnected(region, regions[j])) {
+      if (i !== j && areRegionsGeographicallyAdjacent(region, regions[j])) {
         region.adjacentRegions.push(regions[j].id);
       }
     }
   });
   
-  console.log(`Generated ${regions.length} interconnected messy regions`);
+  console.log(`Generated ${regions.length} geographical regions`);
   const regionsWithAdjacencies = regions.filter(r => r.adjacentRegions.length > 0);
   console.log(`Found ${regionsWithAdjacencies.length} regions with adjacencies:`, 
     regionsWithAdjacencies.map(r => `${r.id}:${r.adjacentRegions.length}`).join(', '));
@@ -455,36 +449,107 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
   return regions;
 };
 
-const areRegionsConnected = (region1: Region, region2: Region): boolean => {
-  const tolerance = 50; // Very generous tolerance for interconnected structure
+// Create geographical-looking region using Voronoi with natural boundary variations
+const createGeographicalRegion = (seed: Point, allSeeds: Point[], width: number, height: number, index: number): Point[] => {
+  // Start with bounding rectangle
+  let vertices: Point[] = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height }
+  ];
   
-  // Check center-to-center distance - much more generous for messy interconnected structure
-  const centerDistance = distance(region1.center, region2.center);
-  const maxConnectionDistance = Math.min(150, Math.max(
-    Math.sqrt(region1.vertices.length) * 30,
-    Math.sqrt(region2.vertices.length) * 30
-  ));
-  
-  // If centers are reasonably close, consider them connected
-  if (centerDistance < maxConnectionDistance) {
-    return true;
+  // Clip against other seeds to create Voronoi cell
+  for (let i = 0; i < allSeeds.length; i++) {
+    if (i === index) continue;
+    
+    const otherSeed = allSeeds[i];
+    vertices = clipPolygonByBisector(vertices, seed, otherSeed);
+    
+    if (vertices.length < 3) break;
   }
   
-  // Check if any vertex of region1 is close to any vertex or edge of region2
-  for (const vertex1 of region1.vertices) {
-    // Check vertex-to-vertex proximity
-    for (const vertex2 of region2.vertices) {
-      if (distance(vertex1, vertex2) < tolerance) {
-        return true;
+  if (vertices.length < 3) return vertices;
+  
+  // Add geographical irregularities - make coastlines and borders more natural
+  const irregularVertices: Point[] = [];
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const current = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    irregularVertices.push(current);
+    
+    // Add coastal/border irregularities between vertices
+    const edgeLength = distance(current, next);
+    if (edgeLength > 30) {
+      const numIntermediate = Math.floor(edgeLength / 40);
+      
+      for (let j = 1; j <= numIntermediate; j++) {
+        const t = j / (numIntermediate + 1);
+        const baseX = current.x + (next.x - current.x) * t;
+        const baseY = current.y + (next.y - current.y) * t;
+        
+        // Add natural geographical variation (like coastline erosion)
+        const perpX = -(next.y - current.y) / edgeLength;
+        const perpY = (next.x - current.x) / edgeLength;
+        
+        const variation = (Math.random() - 0.5) * 20; // Natural border variation
+        const jaggedX = baseX + perpX * variation;
+        const jaggedY = baseY + perpY * variation;
+        
+        irregularVertices.push({
+          x: Math.max(5, Math.min(width - 5, jaggedX)),
+          y: Math.max(5, Math.min(height - 5, jaggedY))
+        });
       }
     }
+  }
+  
+  return applyGeographicalSmoothing(irregularVertices);
+};
+
+// Apply geographical smoothing for natural-looking borders
+const applyGeographicalSmoothing = (vertices: Point[]): Point[] => {
+  if (vertices.length < 4) return vertices;
+  
+  const smoothed: Point[] = [];
+  const smoothingFactor = 0.15; // Light smoothing for natural look
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const prev = vertices[(i - 1 + vertices.length) % vertices.length];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
     
-    // Check vertex-to-edge proximity
-    for (let i = 0; i < region2.vertices.length; i++) {
-      const edgeStart = region2.vertices[i];
-      const edgeEnd = region2.vertices[(i + 1) % region2.vertices.length];
+    // Apply geographical smoothing
+    const smoothX = prev.x * smoothingFactor + curr.x * (1 - 2 * smoothingFactor) + next.x * smoothingFactor;
+    const smoothY = prev.y * smoothingFactor + curr.y * (1 - 2 * smoothingFactor) + next.y * smoothingFactor;
+    
+    smoothed.push({ x: smoothX, y: smoothY });
+  }
+  
+  return smoothed;
+};
+
+const areRegionsGeographicallyAdjacent = (region1: Region, region2: Region): boolean => {
+  const tolerance = 15; // Realistic border tolerance for geographical regions
+  
+  // Check center-to-center distance for quick rejection
+  const centerDistance = distance(region1.center, region2.center);
+  const maxConnectionDistance = 120; // Reasonable max distance for geographical adjacency
+  
+  if (centerDistance > maxConnectionDistance) return false;
+  
+  // Check for shared borders like real geographical regions
+  for (let i = 0; i < region1.vertices.length; i++) {
+    const edge1Start = region1.vertices[i];
+    const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
+    
+    for (let j = 0; j < region2.vertices.length; j++) {
+      const edge2Start = region2.vertices[j];
+      const edge2End = region2.vertices[(j + 1) % region2.vertices.length];
       
-      if (distancePointToLineSegment(vertex1, edgeStart, edgeEnd) < tolerance) {
+      if (edgeToEdgeDistance(edge1Start, edge1End, edge2Start, edge2End) < tolerance) {
         return true;
       }
     }
