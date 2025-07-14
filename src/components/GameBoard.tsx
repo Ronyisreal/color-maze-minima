@@ -39,7 +39,7 @@ export const GameBoard: React.FC = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [score, setScore] = useState<ScoreData | null>(null);
   const [totalScore, setTotalScore] = useState(0);
-  const [currentScore, setCurrentScore] = useState(100);
+  const [currentScore] = useState(100);
   const [timeLeft, setTimeLeft] = useState(getTimeLimit('easy'));
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
@@ -76,8 +76,7 @@ export const GameBoard: React.FC = () => {
     setMinimumColors(Math.max(config.minColors, minColors));
     setRegions(newRegions);
     
-    const startingScore = Math.floor(100 / newRegions.length) * newRegions.length;
-    setCurrentScore(startingScore);
+    // Score is always 100
   };
 
   const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
@@ -285,9 +284,8 @@ export const GameBoard: React.FC = () => {
     });
 
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
-      setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
-        title: "Invalid move! (-5 points)",
+        title: "Invalid move!",
         description: "This color shares a border with another region of the same color.",
         variant: "destructive",
       });
@@ -337,8 +335,7 @@ export const GameBoard: React.FC = () => {
     const resetRegions = regions.map(region => ({ ...region, color: null }));
     setRegions(resetRegions);
     setSelectedColor(null);
-    const startingScore = Math.floor(100 / regions.length) * regions.length;
-    setCurrentScore(startingScore);
+    // Score remains 100
     
     toast({
       title: "Game Reset",
@@ -437,14 +434,7 @@ export const GameBoard: React.FC = () => {
               />
             </Card>
             
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Color Palette</h3>
-              <ColorPalette
-                colors={AVAILABLE_COLORS}
-                selectedColor={selectedColor}
-                onColorSelect={setSelectedColor}
-              />
-            </Card>
+            {/* Color palette moved under canvas */}
 
             <div className="space-y-2">
               <Button onClick={resetGame} className="w-full" variant="outline">
@@ -528,6 +518,16 @@ export const GameBoard: React.FC = () => {
                   })}
                 </svg>
               </div>
+            </Card>
+            
+            {/* Color Palette under canvas */}
+            <Card className="p-4 mt-4">
+              <h3 className="font-semibold mb-3">Color Palette</h3>
+              <ColorPalette
+                colors={AVAILABLE_COLORS}
+                selectedColor={selectedColor}
+                onColorSelect={setSelectedColor}
+              />
             </Card>
           </div>
         </div>
