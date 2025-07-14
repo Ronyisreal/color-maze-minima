@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,17 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
   selectedDifficulty,
   onDifficultyChange,
 }) => {
+  const [showAnimation, setShowAnimation] = useState(true);
+
+  useEffect(() => {
+    // Stop animation after 5 minutes (300,000 milliseconds)
+    const timer = setTimeout(() => {
+      setShowAnimation(false);
+    }, 300000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const difficulties = [
     {
       id: 'easy' as Difficulty,
@@ -48,7 +59,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       <h3 className="font-bold text-xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
         <div className="relative overflow-hidden">
           <Star className="w-6 h-6 text-purple-600" />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent w-full h-full animate-shine-glare"></div>
+          <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent w-full h-full ${showAnimation ? 'animate-shine-glare' : ''}`}></div>
         </div>
         Difficulty Level
       </h3>
