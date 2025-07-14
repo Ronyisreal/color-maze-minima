@@ -374,37 +374,52 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
 const generateRobustRegions = (width: number, height: number, numRegions: number, difficulty: Difficulty): Region[] => {
   const regions: Region[] = [];
   
-  // Create a reliable grid-based approach with organic variation
-  const cols = Math.ceil(Math.sqrt(numRegions * 1.3));
-  const rows = Math.ceil(numRegions / cols);
-  const cellWidth = width / cols;
-  const cellHeight = height / rows;
+  // Create one big interconnected messy structure
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const maxRadius = Math.min(width, height) * 0.4;
+  
+  // Generate interconnected regions in a spiral/web pattern
+  const angleStep = (2 * Math.PI) / numRegions;
+  const radiusStep = maxRadius / Math.ceil(numRegions / 6);
   
   let regionCount = 0;
   
-  for (let row = 0; row < rows && regionCount < numRegions; row++) {
-    for (let col = 0; col < cols && regionCount < numRegions; col++) {
-      const baseX = col * cellWidth;
-      const baseY = row * cellHeight;
+  // Create concentric rings of connected regions
+  for (let ring = 0; ring < Math.ceil(numRegions / 6) && regionCount < numRegions; ring++) {
+    const ringRadius = (ring + 1) * radiusStep;
+    const regionsInRing = ring === 0 ? 1 : Math.min(6 + ring * 2, numRegions - regionCount);
+    
+    for (let i = 0; i < regionsInRing && regionCount < numRegions; i++) {
+      const baseAngle = (i / regionsInRing) * 2 * Math.PI;
+      const angleVariation = (Math.random() - 0.5) * 0.3;
+      const angle = baseAngle + angleVariation;
       
-      // Create slightly irregular rectangles with organic curves
-      const variation = Math.min(cellWidth, cellHeight) * 0.2;
+      const radiusVariation = (Math.random() - 0.5) * radiusStep * 0.4;
+      const radius = ring === 0 ? 0 : ringRadius + radiusVariation;
+      
+      const regionCenterX = centerX + Math.cos(angle) * radius;
+      const regionCenterY = centerY + Math.sin(angle) * radius;
+      
+      // Create messy hand-drawn irregular shapes that overlap
       const vertices = [];
+      const numVertices = 5 + Math.floor(Math.random() * 4); // 5-8 vertices
+      const baseSize = radiusStep * (0.8 + Math.random() * 0.6); // Overlapping sizes
       
-      // Create more organic shapes with curves
-      const numVertices = 6 + Math.floor(Math.random() * 3); // 6-8 vertices for organic look
-      
-      for (let i = 0; i < numVertices; i++) {
-        const angle = (i / numVertices) * 2 * Math.PI;
-        const radiusX = cellWidth * 0.4 + (Math.random() - 0.5) * variation;
-        const radiusY = cellHeight * 0.4 + (Math.random() - 0.5) * variation;
+      for (let v = 0; v < numVertices; v++) {
+        const vertexAngle = (v / numVertices) * 2 * Math.PI;
         
-        const x = baseX + cellWidth * 0.5 + Math.cos(angle) * radiusX;
-        const y = baseY + cellHeight * 0.5 + Math.sin(angle) * radiusY;
+        // Add significant randomness for hand-drawn messy look
+        const radiusVariation = 0.5 + Math.random() * 0.8;
+        const angleJitter = (Math.random() - 0.5) * 0.4;
+        const vertexRadius = baseSize * radiusVariation;
+        
+        const x = regionCenterX + Math.cos(vertexAngle + angleJitter) * vertexRadius;
+        const y = regionCenterY + Math.sin(vertexAngle + angleJitter) * vertexRadius;
         
         vertices.push({
-          x: Math.max(5, Math.min(width - 5, x)),
-          y: Math.max(5, Math.min(height - 5, y))
+          x: Math.max(10, Math.min(width - 10, x)),
+          y: Math.max(10, Math.min(height - 10, y))
         });
       }
       
@@ -422,17 +437,17 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
     }
   }
   
-  // Calculate adjacencies using robust border detection
+  // Ensure all regions are connected by making adjacency very generous
   regions.forEach((region, i) => {
     region.adjacentRegions = [];
     for (let j = 0; j < regions.length; j++) {
-      if (i !== j && areRegionsAdjacent(region, regions[j])) {
+      if (i !== j && areRegionsConnected(region, regions[j])) {
         region.adjacentRegions.push(regions[j].id);
       }
     }
   });
   
-  console.log(`Generated ${regions.length} robust regions`);
+  console.log(`Generated ${regions.length} interconnected messy regions`);
   const regionsWithAdjacencies = regions.filter(r => r.adjacentRegions.length > 0);
   console.log(`Found ${regionsWithAdjacencies.length} regions with adjacencies:`, 
     regionsWithAdjacencies.map(r => `${r.id}:${r.adjacentRegions.length}`).join(', '));
@@ -440,37 +455,36 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
   return regions;
 };
 
-const areRegionsAdjacent = (region1: Region, region2: Region): boolean => {
-  const tolerance = 20; // Increased tolerance for better connectivity
+const areRegionsConnected = (region1: Region, region2: Region): boolean => {
+  const tolerance = 50; // Very generous tolerance for interconnected structure
   
-  // Check center-to-center distance first (quick rejection)
+  // Check center-to-center distance - much more generous for messy interconnected structure
   const centerDistance = distance(region1.center, region2.center);
-  const maxSize = Math.max(
-    Math.sqrt(region1.vertices.length) * 50,
-    Math.sqrt(region2.vertices.length) * 50
-  );
+  const maxConnectionDistance = Math.min(150, Math.max(
+    Math.sqrt(region1.vertices.length) * 30,
+    Math.sqrt(region2.vertices.length) * 30
+  ));
   
-  if (centerDistance > maxSize) return false;
+  // If centers are reasonably close, consider them connected
+  if (centerDistance < maxConnectionDistance) {
+    return true;
+  }
   
-  // Check if any vertex of region1 is close to any edge of region2
+  // Check if any vertex of region1 is close to any vertex or edge of region2
   for (const vertex1 of region1.vertices) {
+    // Check vertex-to-vertex proximity
+    for (const vertex2 of region2.vertices) {
+      if (distance(vertex1, vertex2) < tolerance) {
+        return true;
+      }
+    }
+    
+    // Check vertex-to-edge proximity
     for (let i = 0; i < region2.vertices.length; i++) {
       const edgeStart = region2.vertices[i];
       const edgeEnd = region2.vertices[(i + 1) % region2.vertices.length];
       
       if (distancePointToLineSegment(vertex1, edgeStart, edgeEnd) < tolerance) {
-        return true;
-      }
-    }
-  }
-  
-  // Check if any vertex of region2 is close to any edge of region1
-  for (const vertex2 of region2.vertices) {
-    for (let i = 0; i < region1.vertices.length; i++) {
-      const edgeStart = region1.vertices[i];
-      const edgeEnd = region1.vertices[(i + 1) % region1.vertices.length];
-      
-      if (distancePointToLineSegment(vertex2, edgeStart, edgeEnd) < tolerance) {
         return true;
       }
     }
