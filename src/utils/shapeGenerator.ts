@@ -472,62 +472,29 @@ const generateRobustRegions = (width: number, height: number, numRegions: number
 
 // Create geographical-looking region using Voronoi with natural boundary variations
 const createGeographicalRegion = (seed: Point, allSeeds: Point[], width: number, height: number, index: number): Point[] => {
-  // Start with bounding rectangle
-  let vertices: Point[] = [
-    { x: 0, y: 0 },
-    { x: width, y: 0 },
-    { x: width, y: height },
-    { x: 0, y: height }
-  ];
+  console.log('Creating region for seed', index, seed);
   
-  // Clip against other seeds to create Voronoi cell
-  for (let i = 0; i < allSeeds.length; i++) {
-    if (i === index) continue;
+  // Create a simple circular region around each seed as a fallback
+  const radius = 40 + Math.random() * 30; // 40-70 pixel radius
+  const numVertices = 6 + Math.floor(Math.random() * 3); // 6-8 vertices
+  const vertices: Point[] = [];
+  
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * 2 * Math.PI;
+    const radiusVariation = 0.7 + Math.random() * 0.6; // 0.7-1.3 variation
+    const angleJitter = (Math.random() - 0.5) * 0.3;
     
-    const otherSeed = allSeeds[i];
-    vertices = clipPolygonByBisector(vertices, seed, otherSeed);
+    const x = seed.x + Math.cos(angle + angleJitter) * radius * radiusVariation;
+    const y = seed.y + Math.sin(angle + angleJitter) * radius * radiusVariation;
     
-    if (vertices.length < 3) break;
+    vertices.push({
+      x: Math.max(10, Math.min(width - 10, x)),
+      y: Math.max(10, Math.min(height - 10, y))
+    });
   }
   
-  if (vertices.length < 3) return vertices;
-  
-  // Add geographical irregularities - make coastlines and borders more natural
-  const irregularVertices: Point[] = [];
-  
-  for (let i = 0; i < vertices.length; i++) {
-    const current = vertices[i];
-    const next = vertices[(i + 1) % vertices.length];
-    
-    irregularVertices.push(current);
-    
-    // Add coastal/border irregularities between vertices
-    const edgeLength = distance(current, next);
-    if (edgeLength > 30) {
-      const numIntermediate = Math.floor(edgeLength / 40);
-      
-      for (let j = 1; j <= numIntermediate; j++) {
-        const t = j / (numIntermediate + 1);
-        const baseX = current.x + (next.x - current.x) * t;
-        const baseY = current.y + (next.y - current.y) * t;
-        
-        // Add natural geographical variation (like coastline erosion)
-        const perpX = -(next.y - current.y) / edgeLength;
-        const perpY = (next.x - current.x) / edgeLength;
-        
-        const variation = (Math.random() - 0.5) * 20; // Natural border variation
-        const jaggedX = baseX + perpX * variation;
-        const jaggedY = baseY + perpY * variation;
-        
-        irregularVertices.push({
-          x: Math.max(5, Math.min(width - 5, jaggedX)),
-          y: Math.max(5, Math.min(height - 5, jaggedY))
-        });
-      }
-    }
-  }
-  
-  return applyGeographicalSmoothing(irregularVertices);
+  console.log('Created region with', vertices.length, 'vertices');
+  return vertices;
 };
 
 // Apply geographical smoothing for natural-looking borders
