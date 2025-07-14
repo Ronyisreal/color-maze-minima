@@ -490,17 +490,16 @@ export const GameBoard: React.FC = () => {
                       const adjRegion = regions.find(r => r.id === adjId);
                       if (adjRegion && region.id < adjId) {
                         return (
-                          <line
-                            key={`${region.id}-${adjId}`}
-                            x1={region.center.x}
-                            y1={region.center.y}
-                            x2={adjRegion.center.x}
-                            y2={adjRegion.center.y}
-                            stroke="#e5e7eb"
-                            strokeWidth="1"
-                            strokeDasharray="3,3"
-                            opacity="0.6"
-                          />
+                           <line
+                             key={`${region.id}-${adjId}`}
+                             x1={region.center.x}
+                             y1={region.center.y}
+                             x2={adjRegion.center.x}
+                             y2={adjRegion.center.y}
+                             stroke="#374151"
+                             strokeWidth="2"
+                             opacity="0.8"
+                           />
                         );
                       }
                       return null;

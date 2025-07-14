@@ -115,7 +115,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
         <ul className="list-disc list-inside space-y-1 mt-1">
           <li>Adjacent blocks cannot have the same color</li>
           <li>Use minimum colors to get perfect score</li>
-          <li>Dashed lines show block connections</li>
+          <li>Bold selections show block connections</li>
         </ul>
         
         <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
