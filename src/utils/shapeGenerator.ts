@@ -315,81 +315,187 @@ const findAdjacencies = (regions: Region[]): void => {
   }
 };
 
-export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
-  const config = getDifficultyConfig(difficulty, 1);
+// Generate organic blob-like regions that interlock like puzzle pieces
+const generateInterlockingBlobs = (width: number, height: number, numRegions: number, complexity: number): Region[] => {
   const regions: Region[] = [];
+  const margin = 60;
   
-  // Size configuration for random regions
-  const sizeFactor = {
-    easy: { base: 80, variation: 0.5 },
-    medium: { base: 70, variation: 0.6 },  
-    hard: { base: 60, variation: 0.7 }
-  }[difficulty];
+  // Start with a central blob
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const baseSize = Math.min(width, height) / (Math.sqrt(numRegions) * 1.5);
   
-  // Generate completely random regions at random positions
-  for (let i = 0; i < config.numRegions; i++) {
+  // Create the first region as a central blob
+  const firstBlob = generateBlobShape({ x: centerX, y: centerY }, baseSize, complexity, 0);
+  regions.push({
+    id: 'region-1',
+    vertices: firstBlob,
+    center: calculateCentroid(firstBlob),
+    color: null,
+    adjacentRegions: []
+  });
+  
+  // Generate additional regions that grow from existing ones
+  for (let i = 1; i < numRegions; i++) {
+    let bestBlob: Point[] | null = null;
     let attempts = 0;
-    let validRegion = false;
     
-    while (!validRegion && attempts < 50) {
+    while (!bestBlob && attempts < 30) {
       attempts++;
       
-      // Random center position with margins
-      const margin = sizeFactor.base;
-      const center = {
-        x: margin + Math.random() * (width - 2 * margin),
-        y: margin + Math.random() * (height - 2 * margin)
+      // Pick a random existing region to grow from
+      const existingRegion = regions[Math.floor(Math.random() * regions.length)];
+      
+      // Find a random edge on the existing region
+      const edgeIndex = Math.floor(Math.random() * existingRegion.vertices.length);
+      const edgeStart = existingRegion.vertices[edgeIndex];
+      const edgeEnd = existingRegion.vertices[(edgeIndex + 1) % existingRegion.vertices.length];
+      
+      // Calculate edge midpoint and outward direction
+      const edgeMid = {
+        x: (edgeStart.x + edgeEnd.x) / 2,
+        y: (edgeStart.y + edgeEnd.y) / 2
       };
       
-      // Random size for each region
-      const size = sizeFactor.base * (0.7 + Math.random() * sizeFactor.variation);
+      // Calculate outward normal from the edge
+      const edgeVec = { x: edgeEnd.x - edgeStart.x, y: edgeEnd.y - edgeStart.y };
+      const edgeLength = Math.sqrt(edgeVec.x * edgeVec.x + edgeVec.y * edgeVec.y);
+      if (edgeLength < 20) continue;
       
-      // Generate completely irregular organic shape
-      const vertices = generateOrganicShape(center, size, config.complexity + Math.random() * 0.3, i);
-      const actualCenter = calculateCentroid(vertices);
+      const normal = { x: -edgeVec.y / edgeLength, y: edgeVec.x / edgeLength };
       
-      // Check if region is within bounds
-      const withinBounds = vertices.every(v => 
-        v.x > 10 && v.x < width - 10 && v.y > 10 && v.y < height - 10
-      );
+      // Determine correct outward direction
+      const toCenter = { 
+        x: existingRegion.center.x - edgeMid.x, 
+        y: existingRegion.center.y - edgeMid.y 
+      };
+      const dot = normal.x * toCenter.x + normal.y * toCenter.y;
+      if (dot > 0) {
+        normal.x = -normal.x;
+        normal.y = -normal.y;
+      }
       
-      if (withinBounds) {
-        regions.push({
-          id: `region-${i + 1}`,
-          vertices,
-          center: actualCenter,
-          color: null,
-          adjacentRegions: []
-        });
-        validRegion = true;
+      // Position new blob center
+      const blobDistance = baseSize * (0.6 + Math.random() * 0.4);
+      const newCenter = {
+        x: edgeMid.x + normal.x * blobDistance,
+        y: edgeMid.y + normal.y * blobDistance
+      };
+      
+      // Check bounds
+      if (newCenter.x < margin || newCenter.x > width - margin ||
+          newCenter.y < margin || newCenter.y > height - margin) {
+        continue;
+      }
+      
+      // Generate new blob shape
+      const blobSize = baseSize * (0.7 + Math.random() * 0.6);
+      const newBlob = generateBlobShape(newCenter, blobSize, complexity, i);
+      
+      // Create interlocking connection by modifying vertices near the shared edge
+      const interlockingBlob = createInterlockingShape(newBlob, edgeStart, edgeEnd, newCenter);
+      
+      bestBlob = interlockingBlob;
+    }
+    
+    if (bestBlob) {
+      regions.push({
+        id: `region-${i + 1}`,
+        vertices: bestBlob,
+        center: calculateCentroid(bestBlob),
+        color: null,
+        adjacentRegions: []
+      });
+    }
+  }
+  
+  return regions;
+};
+
+// Generate organic blob shapes with irregular boundaries
+const generateBlobShape = (center: Point, size: number, complexity: number, seed: number): Point[] => {
+  const vertices: Point[] = [];
+  const numPoints = 16 + Math.floor(complexity * 12);
+  
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (2 * Math.PI * i) / numPoints;
+    
+    // Create organic variations using multiple sine waves
+    const variation1 = Math.sin(angle * 3 + seed) * size * 0.3;
+    const variation2 = Math.sin(angle * 5 + seed * 2) * size * 0.2;
+    const variation3 = Math.sin(angle * 7 + seed * 3) * size * 0.15;
+    
+    // Base radius with organic distortion
+    const baseRadius = size * (0.6 + Math.sin(seed + i) * 0.2);
+    const totalVariation = variation1 + variation2 + variation3;
+    const radius = Math.max(size * 0.3, baseRadius + totalVariation);
+    
+    const x = center.x + Math.cos(angle) * radius;
+    const y = center.y + Math.sin(angle) * radius;
+    
+    vertices.push({ x, y });
+  }
+  
+  // Apply multiple smoothing passes for organic curves
+  let smoothed = smoothVertices(vertices);
+  smoothed = smoothVertices(smoothed);
+  
+  return smoothed;
+};
+
+// Create interlocking connection between blobs
+const createInterlockingShape = (newBlob: Point[], sharedEdgeStart: Point, sharedEdgeEnd: Point, blobCenter: Point): Point[] => {
+  const result = [...newBlob];
+  const tolerance = 40;
+  
+  // Find vertices that should connect to the shared edge
+  const connectingIndices: number[] = [];
+  
+  newBlob.forEach((vertex, index) => {
+    const distToEdge = distancePointToLineSegment(vertex, sharedEdgeStart, sharedEdgeEnd);
+    if (distToEdge < tolerance) {
+      connectingIndices.push(index);
+    }
+  });
+  
+  // If we found connecting vertices, modify them to create interlocking shape
+  if (connectingIndices.length >= 2) {
+    const sortedIndices = connectingIndices.sort((a, b) => a - b);
+    
+    // Create connecting points along the shared edge with some organic variation
+    const numConnectPoints = Math.min(3, sortedIndices.length);
+    for (let i = 0; i < numConnectPoints; i++) {
+      const t = i / Math.max(1, numConnectPoints - 1);
+      const edgePoint = {
+        x: sharedEdgeStart.x + t * (sharedEdgeEnd.x - sharedEdgeStart.x),
+        y: sharedEdgeStart.y + t * (sharedEdgeEnd.y - sharedEdgeStart.y)
+      };
+      
+      // Add slight organic variation to the connection point
+      const variation = 5 + Math.random() * 10;
+      const angle = Math.random() * 2 * Math.PI;
+      edgePoint.x += Math.cos(angle) * variation;
+      edgePoint.y += Math.sin(angle) * variation;
+      
+      if (i < sortedIndices.length) {
+        result[sortedIndices[i]] = edgePoint;
       }
     }
   }
   
-  // If we couldn't generate enough valid regions, fill remaining with simpler placement
-  while (regions.length < config.numRegions) {
-    const center = {
-      x: 100 + Math.random() * (width - 200),
-      y: 100 + Math.random() * (height - 200)
-    };
-    
-    const size = sizeFactor.base * (0.8 + Math.random() * 0.4);
-    const vertices = generateOrganicShape(center, size, config.complexity, regions.length);
-    const actualCenter = calculateCentroid(vertices);
-    
-    regions.push({
-      id: `region-${regions.length + 1}`,
-      vertices,
-      center: actualCenter,
-      color: null,
-      adjacentRegions: []
-    });
-  }
+  return result;
+};
+
+export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
+  const config = getDifficultyConfig(difficulty, 1);
+  
+  // Generate interlocking blob regions
+  const regions = generateInterlockingBlobs(width, height, config.numRegions, config.complexity);
   
   // Find adjacencies between regions
   findAdjacencies(regions);
   
-  // Ensure connectivity - connect isolated regions to nearest neighbors
+  // Ensure connectivity - connect isolated regions
   regions.forEach(region => {
     if (region.adjacentRegions.length === 0) {
       let closestRegion: Region | null = null;
