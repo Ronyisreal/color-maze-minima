@@ -391,12 +391,12 @@ export const GameBoard: React.FC = () => {
             <span className="letter">L</span>
             <span className="letter">O</span>
             <span className="letter">R</span>
-            <span className="letter"> </span>
+            <span className="letter mr-4"> </span>
             <span className="letter">M</span>
             <span className="letter">A</span>
             <span className="letter">Z</span>
             <span className="letter">E</span>
-            <span className="letter"> </span>
+            <span className="letter mr-4"> </span>
             <span className="letter">M</span>
             <span className="letter">I</span>
             <span className="letter">N</span>
