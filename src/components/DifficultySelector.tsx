@@ -46,7 +46,10 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
   return (
     <Card className="p-4">
       <h3 className="font-bold text-xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
-        <Star className="w-6 h-6 text-purple-600 animate-shine" />
+        <div className="relative overflow-hidden">
+          <Star className="w-6 h-6 text-purple-600" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent w-full h-full animate-shine-glare"></div>
+        </div>
         Difficulty Level
       </h3>
       <div className="space-y-2">

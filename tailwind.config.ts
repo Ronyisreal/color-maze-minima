@@ -85,25 +85,22 @@ export default {
 						height: '0'
 					}
 				},
-				'shine': {
+				'shine-glare': {
 					'0%': {
-						transform: 'scale(1)',
-						filter: 'brightness(1)'
+						transform: 'translateX(-100%)'
 					},
 					'50%': {
-						transform: 'scale(1.1)',
-						filter: 'brightness(1.3) drop-shadow(0 0 8px currentColor)'
+						transform: 'translateX(100%)'
 					},
 					'100%': {
-						transform: 'scale(1)',
-						filter: 'brightness(1)'
+						transform: 'translateX(100%)'
 					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'shine': 'shine 2s ease-in-out infinite'
+				'shine-glare': 'shine-glare 2s ease-in-out infinite'
 			}
 		}
 	},
