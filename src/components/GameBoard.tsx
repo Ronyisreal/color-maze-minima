@@ -76,8 +76,8 @@ export const GameBoard: React.FC = () => {
     setMinimumColors(Math.max(config.minColors, minColors));
     setRegions(newRegions);
     
-    // Reset current score to 100 for new puzzle
-    setCurrentScore(100);
+    // Reset current score to 0 for new puzzle
+    setCurrentScore(0);
   };
 
   const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
@@ -338,8 +338,8 @@ export const GameBoard: React.FC = () => {
     const resetRegions = regions.map(region => ({ ...region, color: null }));
     setRegions(resetRegions);
     setSelectedColor(null);
-    // Reset score to 100
-    setCurrentScore(100);
+    // Reset score to 0
+    setCurrentScore(0);
     
     toast({
       title: "Game Reset",
@@ -367,7 +367,7 @@ export const GameBoard: React.FC = () => {
     setDifficulty(newDifficulty);
     setLevel(1);
     setTotalScore(0);
-    setCurrentScore(100);
+    setCurrentScore(0);
     setGameCompleted(false);
     setGameEnded(false);
     setGameStarted(false);
@@ -383,7 +383,7 @@ export const GameBoard: React.FC = () => {
   };
 
   useEffect(() => {
-    setCurrentScore(100);
+    setCurrentScore(0);
     generateNewPuzzle(difficulty, level);
   }, []);
 
