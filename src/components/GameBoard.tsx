@@ -453,6 +453,8 @@ export const GameBoard: React.FC = () => {
                 colorsUsed={colorsUsed}
                 gameCompleted={gameCompleted}
                 score={score}
+                currentScore={currentScore}
+                regions={regions}
               />
             </Card>
             
