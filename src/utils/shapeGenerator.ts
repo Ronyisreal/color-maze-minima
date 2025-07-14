@@ -315,59 +315,60 @@ const findAdjacencies = (regions: Region[]): void => {
   }
 };
 
-// Generate organic blob-like regions that interlock like puzzle pieces
-const generateInterlockingBlobs = (width: number, height: number, numRegions: number, complexity: number): Region[] => {
+// Generate brain-like regions with folded, convoluted boundaries
+const generateBrainLikeRegions = (width: number, height: number, numRegions: number, complexity: number): Region[] => {
   const regions: Region[] = [];
-  const margin = 60;
+  const margin = 40;
   
-  // Start with a central blob
+  // Start with a central brain region
   const centerX = width / 2;
   const centerY = height / 2;
-  const baseSize = Math.min(width, height) / (Math.sqrt(numRegions) * 1.5);
+  const baseSize = Math.min(width, height) / (Math.sqrt(numRegions) * 1.2);
   
-  // Create the first region as a central blob
-  const firstBlob = generateBlobShape({ x: centerX, y: centerY }, baseSize, complexity, 0);
+  // Create the first region as a central brain fold
+  const firstRegion = generateBrainFoldShape({ x: centerX, y: centerY }, baseSize, complexity, 0);
   regions.push({
     id: 'region-1',
-    vertices: firstBlob,
-    center: calculateCentroid(firstBlob),
+    vertices: firstRegion,
+    center: calculateCentroid(firstRegion),
     color: null,
     adjacentRegions: []
   });
   
-  // Generate additional regions that grow from existing ones
+  // Generate additional regions that grow from existing ones like brain tissue
   for (let i = 1; i < numRegions; i++) {
-    let bestBlob: Point[] | null = null;
+    let bestRegion: Point[] | null = null;
     let attempts = 0;
     
-    while (!bestBlob && attempts < 30) {
+    while (!bestRegion && attempts < 40) {
       attempts++;
       
       // Pick a random existing region to grow from
       const existingRegion = regions[Math.floor(Math.random() * regions.length)];
       
-      // Find a random edge on the existing region
-      const edgeIndex = Math.floor(Math.random() * existingRegion.vertices.length);
-      const edgeStart = existingRegion.vertices[edgeIndex];
-      const edgeEnd = existingRegion.vertices[(edgeIndex + 1) % existingRegion.vertices.length];
+      // Find a suitable connection point (prefer longer edges for brain-like growth)
+      const suitableEdges = findSuitableConnectionEdges(existingRegion);
+      if (suitableEdges.length === 0) continue;
       
-      // Calculate edge midpoint and outward direction
-      const edgeMid = {
-        x: (edgeStart.x + edgeEnd.x) / 2,
-        y: (edgeStart.y + edgeEnd.y) / 2
+      const selectedEdge = suitableEdges[Math.floor(Math.random() * suitableEdges.length)];
+      const edgeStart = existingRegion.vertices[selectedEdge.index];
+      const edgeEnd = existingRegion.vertices[(selectedEdge.index + 1) % existingRegion.vertices.length];
+      
+      // Calculate connection point along the edge
+      const connectionPoint = {
+        x: edgeStart.x + selectedEdge.t * (edgeEnd.x - edgeStart.x),
+        y: edgeStart.y + selectedEdge.t * (edgeEnd.y - edgeStart.y)
       };
       
-      // Calculate outward normal from the edge
+      // Calculate outward direction for brain-like growth
       const edgeVec = { x: edgeEnd.x - edgeStart.x, y: edgeEnd.y - edgeStart.y };
       const edgeLength = Math.sqrt(edgeVec.x * edgeVec.x + edgeVec.y * edgeVec.y);
-      if (edgeLength < 20) continue;
-      
       const normal = { x: -edgeVec.y / edgeLength, y: edgeVec.x / edgeLength };
       
-      // Determine correct outward direction
+      // Ensure outward direction
       const toCenter = { 
-        x: existingRegion.center.x - edgeMid.x, 
-        y: existingRegion.center.y - edgeMid.y 
+        x: existingRegion.center.x - connectionPoint.x, 
+        y: existingRegion.center.y - connectionPoint.y 
       };
       const dot = normal.x * toCenter.x + normal.y * toCenter.y;
       if (dot > 0) {
@@ -375,11 +376,11 @@ const generateInterlockingBlobs = (width: number, height: number, numRegions: nu
         normal.y = -normal.y;
       }
       
-      // Position new blob center
-      const blobDistance = baseSize * (0.6 + Math.random() * 0.4);
+      // Position new region center with brain-like spacing
+      const growthDistance = baseSize * (0.5 + Math.random() * 0.3);
       const newCenter = {
-        x: edgeMid.x + normal.x * blobDistance,
-        y: edgeMid.y + normal.y * blobDistance
+        x: connectionPoint.x + normal.x * growthDistance,
+        y: connectionPoint.y + normal.y * growthDistance
       };
       
       // Check bounds
@@ -388,21 +389,21 @@ const generateInterlockingBlobs = (width: number, height: number, numRegions: nu
         continue;
       }
       
-      // Generate new blob shape
-      const blobSize = baseSize * (0.7 + Math.random() * 0.6);
-      const newBlob = generateBlobShape(newCenter, blobSize, complexity, i);
+      // Generate new brain-like region
+      const regionSize = baseSize * (0.6 + Math.random() * 0.5);
+      const newRegion = generateBrainFoldShape(newCenter, regionSize, complexity, i);
       
-      // Create interlocking connection by modifying vertices near the shared edge
-      const interlockingBlob = createInterlockingShape(newBlob, edgeStart, edgeEnd, newCenter);
+      // Create shared boundary connection
+      const connectedRegion = createBrainConnection(newRegion, edgeStart, edgeEnd, connectionPoint, newCenter);
       
-      bestBlob = interlockingBlob;
+      bestRegion = connectedRegion;
     }
     
-    if (bestBlob) {
+    if (bestRegion) {
       regions.push({
         id: `region-${i + 1}`,
-        vertices: bestBlob,
-        center: calculateCentroid(bestBlob),
+        vertices: bestRegion,
+        center: calculateCentroid(bestRegion),
         color: null,
         adjacentRegions: []
       });
@@ -412,23 +413,28 @@ const generateInterlockingBlobs = (width: number, height: number, numRegions: nu
   return regions;
 };
 
-// Generate organic blob shapes with irregular boundaries
-const generateBlobShape = (center: Point, size: number, complexity: number, seed: number): Point[] => {
+// Generate brain-like folded shapes with gyri and sulci patterns
+const generateBrainFoldShape = (center: Point, size: number, complexity: number, seed: number): Point[] => {
   const vertices: Point[] = [];
-  const numPoints = 16 + Math.floor(complexity * 12);
+  const numPoints = 20 + Math.floor(complexity * 16); // More points for brain-like detail
   
   for (let i = 0; i < numPoints; i++) {
     const angle = (2 * Math.PI * i) / numPoints;
     
-    // Create organic variations using multiple sine waves
-    const variation1 = Math.sin(angle * 3 + seed) * size * 0.3;
-    const variation2 = Math.sin(angle * 5 + seed * 2) * size * 0.2;
-    const variation3 = Math.sin(angle * 7 + seed * 3) * size * 0.15;
+    // Create brain-like folding patterns with multiple frequency components
+    // Simulate gyri (ridges) and sulci (grooves)
+    const gyrusPattern = Math.sin(angle * 4 + seed) * size * 0.25; // Main folds
+    const sulcusPattern = Math.sin(angle * 8 + seed * 1.7) * size * 0.15; // Secondary grooves  
+    const microFold = Math.sin(angle * 12 + seed * 2.3) * size * 0.08; // Fine details
+    const irregularity = Math.sin(angle * 6 + seed * 3.1) * size * 0.12; // Irregular bumps
     
-    // Base radius with organic distortion
-    const baseRadius = size * (0.6 + Math.sin(seed + i) * 0.2);
-    const totalVariation = variation1 + variation2 + variation3;
-    const radius = Math.max(size * 0.3, baseRadius + totalVariation);
+    // Create deeper folding characteristic of brain tissue
+    const foldingDepth = Math.cos(angle * 3 + seed * 1.5) * size * 0.2;
+    
+    // Base radius with brain-like convolutions
+    const baseRadius = size * (0.5 + Math.sin(seed + i * 0.8) * 0.25);
+    const totalFolding = gyrusPattern + sulcusPattern + microFold + irregularity + foldingDepth;
+    const radius = Math.max(size * 0.2, baseRadius + totalFolding);
     
     const x = center.x + Math.cos(angle) * radius;
     const y = center.y + Math.sin(angle) * radius;
@@ -436,50 +442,127 @@ const generateBlobShape = (center: Point, size: number, complexity: number, seed
     vertices.push({ x, y });
   }
   
-  // Apply multiple smoothing passes for organic curves
+  // Apply extensive smoothing for brain-like organic curves
   let smoothed = smoothVertices(vertices);
-  smoothed = smoothVertices(smoothed);
+  smoothed = smoothVertices(smoothed); // Double smoothing
+  smoothed = applyBrainLikeRefinement(smoothed, size); // Brain-specific refinement
   
   return smoothed;
 };
 
-// Create interlocking connection between blobs
-const createInterlockingShape = (newBlob: Point[], sharedEdgeStart: Point, sharedEdgeEnd: Point, blobCenter: Point): Point[] => {
-  const result = [...newBlob];
-  const tolerance = 40;
+// Find suitable edges for brain-like region connections
+const findSuitableConnectionEdges = (region: Region): Array<{index: number, t: number, length: number}> => {
+  const suitableEdges: Array<{index: number, t: number, length: number}> = [];
+  const minEdgeLength = 25; // Minimum edge length for connection
   
-  // Find vertices that should connect to the shared edge
+  for (let i = 0; i < region.vertices.length; i++) {
+    const edgeStart = region.vertices[i];
+    const edgeEnd = region.vertices[(i + 1) % region.vertices.length];
+    const edgeLength = distance(edgeStart, edgeEnd);
+    
+    if (edgeLength >= minEdgeLength) {
+      // Add multiple connection points along longer edges
+      const numConnectionPoints = Math.min(3, Math.floor(edgeLength / 30));
+      for (let j = 0; j < numConnectionPoints; j++) {
+        const t = (j + 1) / (numConnectionPoints + 1); // Avoid endpoints
+        suitableEdges.push({
+          index: i,
+          t: t,
+          length: edgeLength
+        });
+      }
+    }
+  }
+  
+  return suitableEdges;
+};
+
+// Apply brain-specific refinement to create more realistic folding
+const applyBrainLikeRefinement = (vertices: Point[], size: number): Point[] => {
+  const refined: Point[] = [];
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const prev = vertices[(i - 1 + vertices.length) % vertices.length];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    // Calculate local curvature for brain-like effects
+    const curvature = calculateCurvature(prev, curr, next);
+    const curvatureEffect = Math.abs(curvature) * size * 0.1;
+    
+    // Apply brain-like micro-adjustments based on curvature
+    const adjustmentAngle = Math.atan2(next.y - prev.y, next.x - prev.x) + Math.PI / 2;
+    const adjustedX = curr.x + Math.cos(adjustmentAngle) * curvatureEffect * (Math.random() - 0.5);
+    const adjustedY = curr.y + Math.sin(adjustmentAngle) * curvatureEffect * (Math.random() - 0.5);
+    
+    refined.push({ x: adjustedX, y: adjustedY });
+  }
+  
+  return refined;
+};
+
+// Calculate curvature at a point
+const calculateCurvature = (prev: Point, curr: Point, next: Point): number => {
+  const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
+  const v2 = { x: next.x - curr.x, y: next.y - curr.y };
+  
+  const crossProduct = v1.x * v2.y - v1.y * v2.x;
+  const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+  const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+  
+  if (mag1 === 0 || mag2 === 0) return 0;
+  
+  return crossProduct / (mag1 * mag2);
+};
+
+// Create brain-like connections between regions
+const createBrainConnection = (
+  newRegion: Point[], 
+  edgeStart: Point, 
+  edgeEnd: Point, 
+  connectionPoint: Point,
+  regionCenter: Point
+): Point[] => {
+  const result = [...newRegion];
+  const connectionTolerance = 35;
+  
+  // Find vertices that should form the connection
   const connectingIndices: number[] = [];
   
-  newBlob.forEach((vertex, index) => {
-    const distToEdge = distancePointToLineSegment(vertex, sharedEdgeStart, sharedEdgeEnd);
-    if (distToEdge < tolerance) {
+  newRegion.forEach((vertex, index) => {
+    const distToConnection = distance(vertex, connectionPoint);
+    if (distToConnection < connectionTolerance) {
       connectingIndices.push(index);
     }
   });
   
-  // If we found connecting vertices, modify them to create interlocking shape
-  if (connectingIndices.length >= 2) {
+  // Create brain-like connection with shared boundary
+  if (connectingIndices.length >= 1) {
     const sortedIndices = connectingIndices.sort((a, b) => a - b);
     
-    // Create connecting points along the shared edge with some organic variation
-    const numConnectPoints = Math.min(3, sortedIndices.length);
+    // Create connection points that follow the existing edge
+    const numConnectPoints = Math.min(4, Math.max(2, sortedIndices.length));
+    const connectionPoints: Point[] = [];
+    
     for (let i = 0; i < numConnectPoints; i++) {
       const t = i / Math.max(1, numConnectPoints - 1);
       const edgePoint = {
-        x: sharedEdgeStart.x + t * (sharedEdgeEnd.x - sharedEdgeStart.x),
-        y: sharedEdgeStart.y + t * (sharedEdgeEnd.y - sharedEdgeStart.y)
+        x: edgeStart.x + t * (edgeEnd.x - edgeStart.x),
+        y: edgeStart.y + t * (edgeEnd.y - edgeStart.y)
       };
       
-      // Add slight organic variation to the connection point
-      const variation = 5 + Math.random() * 10;
-      const angle = Math.random() * 2 * Math.PI;
-      edgePoint.x += Math.cos(angle) * variation;
-      edgePoint.y += Math.sin(angle) * variation;
+      // Add brain-like micro-variations to avoid perfectly straight connections
+      const microVariation = 3 + Math.random() * 6;
+      const variationAngle = Math.random() * 2 * Math.PI;
+      edgePoint.x += Math.cos(variationAngle) * microVariation;
+      edgePoint.y += Math.sin(variationAngle) * microVariation;
       
-      if (i < sortedIndices.length) {
-        result[sortedIndices[i]] = edgePoint;
-      }
+      connectionPoints.push(edgePoint);
+    }
+    
+    // Apply connection points to the region
+    for (let i = 0; i < Math.min(sortedIndices.length, connectionPoints.length); i++) {
+      result[sortedIndices[i]] = connectionPoints[i];
     }
   }
   
@@ -489,8 +572,8 @@ const createInterlockingShape = (newBlob: Point[], sharedEdgeStart: Point, share
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
   const config = getDifficultyConfig(difficulty, 1);
   
-  // Generate interlocking blob regions
-  const regions = generateInterlockingBlobs(width, height, config.numRegions, config.complexity);
+  // Generate brain-like regions with folded boundaries
+  const regions = generateBrainLikeRegions(width, height, config.numRegions, config.complexity);
   
   // Find adjacencies between regions
   findAdjacencies(regions);
