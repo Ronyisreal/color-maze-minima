@@ -315,117 +315,81 @@ const findAdjacencies = (regions: Region[]): void => {
   }
 };
 
-// Generate cellular-like divisions using Voronoi-inspired approach
-const generateVoronoiSeeds = (width: number, height: number, numRegions: number): Point[] => {
-  const seeds: Point[] = [];
-  const margin = 50;
+export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
+  const config = getDifficultyConfig(difficulty, 1);
+  const regions: Region[] = [];
   
-  // Generate seeds with some spacing to avoid tiny regions
-  for (let i = 0; i < numRegions; i++) {
+  // Size configuration for random regions
+  const sizeFactor = {
+    easy: { base: 80, variation: 0.5 },
+    medium: { base: 70, variation: 0.6 },  
+    hard: { base: 60, variation: 0.7 }
+  }[difficulty];
+  
+  // Generate completely random regions at random positions
+  for (let i = 0; i < config.numRegions; i++) {
     let attempts = 0;
-    let seed: Point;
+    let validRegion = false;
     
-    do {
-      seed = {
+    while (!validRegion && attempts < 50) {
+      attempts++;
+      
+      // Random center position with margins
+      const margin = sizeFactor.base;
+      const center = {
         x: margin + Math.random() * (width - 2 * margin),
         y: margin + Math.random() * (height - 2 * margin)
       };
-      attempts++;
-    } while (attempts < 20 && seeds.some(s => distance(s, seed) < 80));
-    
-    seeds.push(seed);
+      
+      // Random size for each region
+      const size = sizeFactor.base * (0.7 + Math.random() * sizeFactor.variation);
+      
+      // Generate completely irregular organic shape
+      const vertices = generateOrganicShape(center, size, config.complexity + Math.random() * 0.3, i);
+      const actualCenter = calculateCentroid(vertices);
+      
+      // Check if region is within bounds
+      const withinBounds = vertices.every(v => 
+        v.x > 10 && v.x < width - 10 && v.y > 10 && v.y < height - 10
+      );
+      
+      if (withinBounds) {
+        regions.push({
+          id: `region-${i + 1}`,
+          vertices,
+          center: actualCenter,
+          color: null,
+          adjacentRegions: []
+        });
+        validRegion = true;
+      }
+    }
   }
   
-  return seeds;
-};
-
-// Create regions using cellular division approach
-const createCellularRegions = (seeds: Point[], width: number, height: number, complexity: number): Region[] => {
-  const regions: Region[] = [];
-  const gridSize = 8; // Resolution for boundary detection
-  
-  seeds.forEach((seed, index) => {
-    const vertices: Point[] = [];
-    const regionId = `region-${index + 1}`;
+  // If we couldn't generate enough valid regions, fill remaining with simpler placement
+  while (regions.length < config.numRegions) {
+    const center = {
+      x: 100 + Math.random() * (width - 200),
+      y: 100 + Math.random() * (height - 200)
+    };
     
-    // Create boundary by checking grid points around the seed
-    const angles: number[] = [];
-    for (let a = 0; a < 360; a += 15) {
-      angles.push((a * Math.PI) / 180);
-    }
-    
-    angles.forEach(angle => {
-      let radius = 30;
-      let currentPoint = {
-        x: seed.x + Math.cos(angle) * radius,
-        y: seed.y + Math.sin(angle) * radius
-      };
-      
-      // Extend radius until we hit another region's territory or boundary
-      while (radius < 200 && 
-             currentPoint.x > 0 && currentPoint.x < width && 
-             currentPoint.y > 0 && currentPoint.y < height) {
-        
-        let closestSeed = seed;
-        let minDist = 0;
-        
-        seeds.forEach(otherSeed => {
-          const dist = distance(currentPoint, otherSeed);
-          if (otherSeed === seed) {
-            minDist = dist;
-          } else if (dist < minDist) {
-            closestSeed = otherSeed;
-          }
-        });
-        
-        if (closestSeed !== seed) break;
-        
-        radius += gridSize;
-        currentPoint = {
-          x: seed.x + Math.cos(angle) * radius,
-          y: seed.y + Math.sin(angle) * radius
-        };
-      }
-      
-      // Add organic variation to the boundary
-      const variation = Math.sin(angle * 3 + index) * 15 * complexity;
-      const finalRadius = Math.max(30, radius - gridSize + variation);
-      
-      vertices.push({
-        x: seed.x + Math.cos(angle) * finalRadius,
-        y: seed.y + Math.sin(angle) * finalRadius
-      });
-    });
-    
-    // Smooth the vertices for organic look
-    const smoothedVertices = smoothVertices(vertices);
-    const center = calculateCentroid(smoothedVertices);
+    const size = sizeFactor.base * (0.8 + Math.random() * 0.4);
+    const vertices = generateOrganicShape(center, size, config.complexity, regions.length);
+    const actualCenter = calculateCentroid(vertices);
     
     regions.push({
-      id: regionId,
-      vertices: smoothedVertices,
-      center,
+      id: `region-${regions.length + 1}`,
+      vertices,
+      center: actualCenter,
       color: null,
       adjacentRegions: []
     });
-  });
-  
-  return regions;
-};
-
-export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
-  const config = getDifficultyConfig(difficulty, 1);
-  
-  // Generate seed points for cellular regions
-  const seeds = generateVoronoiSeeds(width, height, config.numRegions);
-  
-  // Create cellular regions based on seeds
-  const regions = createCellularRegions(seeds, width, height, config.complexity);
+  }
   
   // Find adjacencies between regions
   findAdjacencies(regions);
   
-  // Ensure connectivity - if any region is isolated, connect it to nearest neighbor
+  // Ensure connectivity - connect isolated regions to nearest neighbors
   regions.forEach(region => {
     if (region.adjacentRegions.length === 0) {
       let closestRegion: Region | null = null;
