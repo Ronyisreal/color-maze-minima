@@ -38,27 +38,27 @@ const distance = (p1: Point, p2: Point): number => {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 };
 
-// Generate brain-like shapes with convolutions and folds
+// Generate brain-like shapes with smooth convolutions (no extensions)
 const generateOrganicShape = (center: Point, size: number, complexity: number): Point[] => {
   const vertices: Point[] = [];
-  const numPoints = 20 + Math.floor(complexity * 16); // More points for brain-like complexity
+  const numPoints = 16 + Math.floor(complexity * 12); // Moderate points for smooth brain-like shapes
   
   for (let i = 0; i < numPoints; i++) {
     const angle = (2 * Math.PI * i) / numPoints;
     
-    // Create brain-like convolutions with multiple frequency variations
-    const baseRadius = size * (0.4 + Math.random() * 0.6); // Wide variation for brain folds
+    // More controlled radius for brain-like folds without extensions
+    const baseRadius = size * (0.6 + Math.random() * 0.3); // Controlled variation
     
-    // Multiple sine waves to create brain-like convolutions
-    const brainFold1 = Math.sin(angle * 3 + Math.random() * Math.PI) * size * 0.3;
-    const brainFold2 = Math.sin(angle * 5 + Math.random() * Math.PI) * size * 0.2;
-    const brainFold3 = Math.sin(angle * 7 + Math.random() * Math.PI) * size * 0.15;
+    // Smooth brain-like convolutions using consistent sine waves
+    const brainFold1 = Math.sin(angle * 2) * size * 0.2;
+    const brainFold2 = Math.sin(angle * 4) * size * 0.15;
+    const brainFold3 = Math.sin(angle * 6) * size * 0.1;
     
     const organicVariation = brainFold1 + brainFold2 + brainFold3;
     const radius = baseRadius + organicVariation;
     
-    // High noise for irregular brain-like texture
-    const noise = (Math.random() - 0.5) * size * 0.4;
+    // Minimal noise to prevent extensions while keeping organic feel
+    const noise = (Math.random() - 0.5) * size * 0.1;
     
     const x = center.x + Math.cos(angle) * (radius + noise);
     const y = center.y + Math.sin(angle) * (radius + noise);
