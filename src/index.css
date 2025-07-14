@@ -137,17 +137,20 @@ All colors MUST be HSL.
   .colorful-title .letter:nth-child(13) { color: #ef4444; animation-delay: 2.4s; }
   .colorful-title .letter:nth-child(14) { color: #f97316; animation-delay: 2.6s; }
   .colorful-title .letter:nth-child(15) { color: #f59e0b; animation-delay: 2.8s; }
-  .colorful-title .letter:nth-child(16) { color: #10b981; animation-delay: 3s; }
+  .colorful-title .letter:nth-child(16) { color: #ec4899; animation-delay: 3s; }
 
   /* Color palette animations */
   .color-option {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     transform: scale(1);
+    position: relative;
+    z-index: 1;
   }
   
   .color-option:hover {
-    transform: scale(1.1) translateY(-4px);
+    transform: scale(1.05) translateY(-2px);
     filter: brightness(1.1);
+    z-index: 10;
   }
   
   .color-option.red:hover {

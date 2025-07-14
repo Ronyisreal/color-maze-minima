@@ -25,12 +25,12 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-3">
       {colors.map((color) => (
         <Button
           key={color.value}
           variant={selectedColor === color.value ? "default" : "outline"}
-          className={`h-12 relative overflow-hidden group color-option ${getColorClass(color.name)}`}
+          className={`h-12 relative overflow-visible group color-option ${getColorClass(color.name)}`}
           onClick={() => onColorSelect(color.value)}
           style={{
             backgroundColor: selectedColor === color.value ? color.value : 'transparent',
