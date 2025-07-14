@@ -39,7 +39,7 @@ export const GameBoard: React.FC = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [score, setScore] = useState<ScoreData | null>(null);
   const [totalScore, setTotalScore] = useState(0);
-  const [currentScore] = useState(100);
+  const [currentScore, setCurrentScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLimit('easy'));
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
@@ -76,7 +76,8 @@ export const GameBoard: React.FC = () => {
     setMinimumColors(Math.max(config.minColors, minColors));
     setRegions(newRegions);
     
-    // Score is always 100
+    // Reset current score to 100 for new puzzle
+    setCurrentScore(100);
   };
 
   const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
@@ -284,8 +285,10 @@ export const GameBoard: React.FC = () => {
     });
 
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
+      // Deduct 5 points for invalid move
+      setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
-        title: "Invalid move!",
+        title: "Invalid move! (-5 points)",
         description: "This color shares a border with another region of the same color.",
         variant: "destructive",
       });
@@ -335,7 +338,8 @@ export const GameBoard: React.FC = () => {
     const resetRegions = regions.map(region => ({ ...region, color: null }));
     setRegions(resetRegions);
     setSelectedColor(null);
-    // Score remains 100
+    // Reset score to 100
+    setCurrentScore(100);
     
     toast({
       title: "Game Reset",
@@ -363,6 +367,7 @@ export const GameBoard: React.FC = () => {
     setDifficulty(newDifficulty);
     setLevel(1);
     setTotalScore(0);
+    setCurrentScore(100);
     setGameCompleted(false);
     setGameEnded(false);
     setGameStarted(false);
@@ -378,6 +383,7 @@ export const GameBoard: React.FC = () => {
   };
 
   useEffect(() => {
+    setCurrentScore(100);
     generateNewPuzzle(difficulty, level);
   }, []);
 
