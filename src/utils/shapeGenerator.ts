@@ -208,5 +208,19 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
     }
   });
   
+  // Re-number all regions sequentially from 1 to ensure no gaps
+  // First create a mapping from old IDs to new IDs
+  const idMapping = new Map<string, string>();
+  regions.forEach((region, index) => {
+    const newId = `region-${index + 1}`;
+    idMapping.set(region.id, newId);
+    region.id = newId;
+  });
+  
+  // Update all adjacentRegions arrays to use the new IDs
+  regions.forEach(region => {
+    region.adjacentRegions = region.adjacentRegions.map(oldId => idMapping.get(oldId) || oldId);
+  });
+  
   return regions;
 };
