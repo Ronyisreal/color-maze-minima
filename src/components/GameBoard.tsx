@@ -285,16 +285,16 @@ export const GameBoard: React.FC = () => {
     });
 
     if (isColorConflict(regionId, selectedColor, updatedRegions)) {
-      // Deduct 5 points for invalid move
-      setCurrentScore(prev => Math.max(0, prev - 5));
       toast({
-        title: "Invalid move! (-5 points)",
+        title: "Invalid move!",
         description: "This color shares a border with another region of the same color.",
         variant: "destructive",
       });
       return;
     }
 
+    // Add 10 points for successfully coloring a region
+    setCurrentScore(prev => prev + 10);
     setRegions(updatedRegions);
     checkGameCompletion(updatedRegions);
   };
