@@ -75,7 +75,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Level
             </span>
-            <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-lg px-4 py-2 animate-scale-in">
+            <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
               {level}
             </Badge>
           </div>
@@ -90,7 +90,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Minimum Colors
             </span>
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-lg px-4 py-2 animate-scale-in">
+            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
               {minimumColors}
             </Badge>
           </div>
@@ -105,24 +105,23 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Colors Used
             </span>
-            <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white text-lg px-4 py-2 animate-scale-in">
-              {usedColorsList.length}
-            </Badge>
-          </div>
-          
-          {/* Show actual color swatches */}
-          {usedColorsList.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {usedColorsList.map((color, index) => (
-                <div
-                  key={index}
-                  className="w-8 h-8 rounded-full border-2 border-white shadow-lg hover-scale animate-scale-in"
-                  style={{ backgroundColor: color }}
-                  title={`Color ${index + 1}`}
-                />
-              ))}
+            <div className="flex gap-1">
+              {usedColorsList.length > 0 ? (
+                usedColorsList.map((color, index) => (
+                  <div
+                    key={index}
+                    className="w-6 h-6 rounded-full border-2 border-white shadow-lg hover-scale animate-scale-in"
+                    style={{ backgroundColor: color }}
+                    title={`Color ${index + 1}`}
+                  />
+                ))
+              ) : (
+                <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
+                  0
+                </Badge>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Current Score - Always visible */}
@@ -134,7 +133,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Current Score
             </span>
-            <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-lg px-4 py-2 animate-scale-in">
+            <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
               {currentScore}
             </Badge>
           </div>
