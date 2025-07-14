@@ -277,19 +277,8 @@ export const GameBoard: React.FC = () => {
         <div className="text-center mb-6">
           <p className="text-white">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
           <div className="flex justify-center items-center gap-6 mt-4">
-            <span className="text-lg font-semibold text-purple-600">Total Score: {regions.length * 10}</span>
-            <div className="flex items-center gap-2">
-              <Timer className="w-5 h-5 text-blue-600" />
-              <span className={`text-lg font-bold transition-colors duration-300 ${
-                timeLeft <= 30 ? 'text-red-600 animate-pulse' : 
-                timeLeft <= 60 ? 'text-orange-600' : 
-                'text-blue-600'
-              }`}>
-                {formatTime(timeLeft)}
-              </span>
-            </div>
             <div className="flex items-center gap-4">
-              <span className="text-lg font-semibold text-green-600">Current Score: {currentScore}</span>
+              <span className="text-lg font-semibold text-emerald-400">Current Score: {currentScore}</span>
               <Button 
                 onClick={bailOut} 
                 size="sm" 
@@ -300,6 +289,17 @@ export const GameBoard: React.FC = () => {
                 <Frown className="w-4 h-4 mr-1" />
                 I bail
               </Button>
+            </div>
+            <span className="text-lg font-semibold text-violet-400">Total Score: {regions.length * 10}</span>
+            <div className="flex items-center gap-2">
+              <Timer className="w-5 h-5 text-cyan-400" />
+              <span className={`text-lg font-bold transition-colors duration-300 ${
+                timeLeft <= 30 ? 'text-red-400 animate-pulse' : 
+                timeLeft <= 60 ? 'text-orange-400' : 
+                'text-cyan-400'
+              }`}>
+                {formatTime(timeLeft)}
+              </span>
             </div>
           </div>
         </div>
