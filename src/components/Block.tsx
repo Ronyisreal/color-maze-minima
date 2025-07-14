@@ -35,8 +35,7 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
       <polygon
         points={points}
         fill={getFill()}
-        stroke="#333"
-        strokeWidth={strokeWidth}
+        stroke="none"
         className={className}
         onClick={handleClick}
         opacity={0.7}
