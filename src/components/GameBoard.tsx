@@ -66,10 +66,12 @@ export const GameBoard: React.FC = () => {
   }, [gameStarted, gameCompleted, gameEnded, timeLeft]);
 
   const generateNewPuzzle = (difficulty: Difficulty, level: number) => {
+    console.log('generateNewPuzzle called:', { difficulty, level });
     const boardWidth = 800;
     const boardHeight = 600;
     
     const newRegions = generateLargeComplexShape(boardWidth, boardHeight, difficulty);
+    console.log('Generated regions:', newRegions.length);
     
     const minColors = calculateMinimumColorsWelshPowell(newRegions);
     const config = getDifficultyConfig(difficulty, level);
@@ -78,6 +80,8 @@ export const GameBoard: React.FC = () => {
     
     // Reset current score to 0 for new puzzle
     setCurrentScore(0);
+    
+    console.log('Puzzle generation complete');
   };
 
   const calculateMinimumColorsWelshPowell = (regions: Region[]): number => {
@@ -189,6 +193,7 @@ export const GameBoard: React.FC = () => {
   };
 
   const resetGame = () => {
+    console.log('resetGame called - generating new puzzle');
     setGameCompleted(false);
     setGameEnded(false);
     setGameStarted(false);
@@ -196,7 +201,12 @@ export const GameBoard: React.FC = () => {
     setSelectedColor(null);
     setScore(null);
     setTimeLeft(getTimeLimit(difficulty));
-    generateNewPuzzle(difficulty, level);
+    
+    // Force immediate puzzle generation with current values
+    setTimeout(() => {
+      console.log('Generating new puzzle after state reset');
+      generateNewPuzzle(difficulty, level);
+    }, 0);
   };
 
   const bailOut = () => {
