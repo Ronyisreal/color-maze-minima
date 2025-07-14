@@ -275,7 +275,7 @@ export const GameBoard: React.FC = () => {
     <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
-          <p className="text-gray-600">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
+          <p className="text-white">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
           <div className="flex justify-center items-center gap-6 mt-4">
             <span className="text-lg font-semibold text-purple-600">Total Score: {regions.length * 10}</span>
             <div className="flex items-center gap-2">
