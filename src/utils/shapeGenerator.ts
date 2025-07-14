@@ -80,7 +80,7 @@ const distancePointToLineSegment = (point: Point, lineStart: Point, lineEnd: Poi
 
 // Check if two regions actually share a border (have overlapping edges)
 const doRegionsShareBorder = (region1: Region, region2: Region): boolean => {
-  const tolerance = 15; // Tolerance for connection detection
+  const tolerance = 8; // Reduced tolerance for better connectivity detection
   
   // Check if any vertices are close enough to indicate shared border
   for (const v1 of region1.vertices) {
@@ -91,7 +91,7 @@ const doRegionsShareBorder = (region1: Region, region2: Region): boolean => {
     }
   }
   
-  // Also check edge-to-edge proximity
+  // Check edge-to-edge proximity for shared borders
   for (let i = 0; i < region1.vertices.length; i++) {
     const edge1Start = region1.vertices[i];
     const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
@@ -144,14 +144,14 @@ const findAdjacencies = (regions: Region[]): void => {
   }
 };
 
-// Generate regions using Voronoi diagram for proper map-like tessellation
+// Generate regions using proper Voronoi tessellation for connected map-like regions
 const generateMapRegions = (width: number, height: number, numRegions: number): Region[] => {
   const regions: Region[] = [];
-  const margin = 60;
+  const margin = 40;
   const seeds: Point[] = [];
   
   // Generate well-distributed seed points using Poisson disk sampling
-  const minDistance = Math.min(width, height) / Math.sqrt(numRegions) * 0.7;
+  const minDistance = Math.min(width, height) / Math.sqrt(numRegions) * 0.8;
   let attempts = 0;
   
   while (seeds.length < numRegions && attempts < numRegions * 50) {
@@ -175,9 +175,9 @@ const generateMapRegions = (width: number, height: number, numRegions: number): 
     attempts++;
   }
   
-  // Fill remaining seeds with relaxed constraints if needed
+  // Fill remaining seeds if needed with relaxed constraints
   while (seeds.length < numRegions) {
-    const relaxedDistance = minDistance * 0.6;
+    const relaxedDistance = minDistance * 0.5;
     let placed = false;
     
     for (let attempt = 0; attempt < 100 && !placed; attempt++) {
@@ -200,13 +200,15 @@ const generateMapRegions = (width: number, height: number, numRegions: number): 
       }
     }
     
-    if (!placed) break; // Prevent infinite loop
+    if (!placed) break;
   }
   
-  // Create Voronoi cells for each seed
+  console.log(`Generated ${seeds.length} seeds for ${numRegions} requested regions`);
+  
+  // Create clean Voronoi cells without organic variation to ensure proper connectivity
   for (let i = 0; i < seeds.length; i++) {
     const seed = seeds[i];
-    const cellVertices = createVoronoiCell(seed, seeds, width, height);
+    const cellVertices = createCleanVoronoiCell(seed, seeds, width, height);
     
     if (cellVertices.length >= 3) {
       regions.push({
@@ -216,16 +218,17 @@ const generateMapRegions = (width: number, height: number, numRegions: number): 
         color: null,
         adjacentRegions: []
       });
+      console.log(`Created region ${i + 1} with ${cellVertices.length} vertices`);
     } else {
-      console.warn('Degenerate cell for seed', i, seed, cellVertices);
+      console.warn('Degenerate cell for seed', i, seed, 'vertices:', cellVertices.length);
     }
   }
   
   return regions;
 };
 
-// Create a Voronoi cell using the half-plane intersection method with organic smoothing
-const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
+// Create a clean Voronoi cell ensuring proper connectivity
+const createCleanVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
   // Start with the bounding rectangle
   let clipVertices: Point[] = [
     { x: 0, y: 0 },
@@ -234,98 +237,40 @@ const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height
     { x: 0, y: height }
   ];
   
-  // Clip against each bisector
+  // Clip against each bisector to create clean Voronoi cell
   for (const otherSeed of allSeeds) {
     if (otherSeed === seed) continue;
     
     clipVertices = clipPolygonByBisector(clipVertices, seed, otherSeed);
-    if (clipVertices.length < 3) break; // Polygon too small
-  }
-  
-  // Add organic variation to make shapes more natural and map-like
-  const organicVertices = addOrganicVariation(clipVertices, seed);
-  
-  // Repair: If less than 3 points, fallback to the original clipVertices
-  if (organicVertices.length < 3) {
-    console.warn('Organic variation resulted in degenerate polygon, using original vertices');
-    return clipVertices;
-  }
-  
-  return organicVertices;
-};
-
-// Add organic variation to make shapes look more like natural regions
-const addOrganicVariation = (vertices: Point[], seed: Point): Point[] => {
-  if (vertices.length < 3) return vertices;
-  
-  const organic: Point[] = [];
-  const avgDistance = vertices.reduce((sum, v) => sum + distance(v, seed), 0) / vertices.length;
-  const variationAmount = avgDistance * 0.15; // 15% variation
-  
-  for (let i = 0; i < vertices.length; i++) {
-    const current = vertices[i];
-    const next = vertices[(i + 1) % vertices.length];
-    
-    // Add the current vertex with slight organic displacement
-    const displacement = (Math.random() - 0.5) * variationAmount * 0.3;
-    const angle = Math.atan2(current.y - seed.y, current.x - seed.x);
-    const displacedVertex = {
-      x: current.x + Math.cos(angle) * displacement,
-      y: current.y + Math.sin(angle) * displacement
-    };
-    organic.push(displacedVertex);
-    
-    // Add 1-2 intermediate points along each edge for more organic curves
-    const edgeLength = distance(current, next);
-    if (edgeLength > 40) { // Only for longer edges
-      const numIntermediatePoints = Math.floor(edgeLength / 60) + 1;
-      
-      for (let j = 1; j <= numIntermediatePoints; j++) {
-        const t = j / (numIntermediatePoints + 1);
-        const baseX = current.x + t * (next.x - current.x);
-        const baseY = current.y + t * (next.y - current.y);
-        
-        // Add natural curve variation
-        const edgeAngle = Math.atan2(next.y - current.y, next.x - current.x);
-        const perpAngle = edgeAngle + Math.PI / 2;
-        const curveAmount = (Math.random() - 0.5) * variationAmount * 0.6;
-        
-        const curvePoint = {
-          x: baseX + Math.cos(perpAngle) * curveAmount,
-          y: baseY + Math.sin(perpAngle) * curveAmount
-        };
-        
-        organic.push(curvePoint);
-      }
+    if (clipVertices.length < 3) {
+      console.warn('Polygon became degenerate during clipping');
+      break;
     }
   }
   
-  // Smooth the organic vertices to create natural curves
-  const smoothed = smoothVertices(organic);
-  
-  // Ensure we still have enough vertices after smoothing
-  if (smoothed.length < 3) {
-    console.warn('Smoothing resulted in degenerate polygon, using original vertices');
-    return vertices;
+  // Apply minimal smoothing only to prevent jagged edges, but maintain connectivity
+  if (clipVertices.length >= 3) {
+    return applyMinimalSmoothing(clipVertices);
   }
   
-  return smoothed;
+  return clipVertices;
 };
 
-// Smooth vertices to create natural, flowing curves
-const smoothVertices = (vertices: Point[]): Point[] => {
-  if (vertices.length < 3) return vertices;
+// Apply very light smoothing to prevent sharp corners while maintaining connectivity
+const applyMinimalSmoothing = (vertices: Point[]): Point[] => {
+  if (vertices.length < 4) return vertices; // Don't smooth triangles
   
   const smoothed: Point[] = [];
+  const smoothingFactor = 0.1; // Very light smoothing
   
   for (let i = 0; i < vertices.length; i++) {
     const prev = vertices[(i - 1 + vertices.length) % vertices.length];
     const curr = vertices[i];
     const next = vertices[(i + 1) % vertices.length];
     
-    // Apply weighted smoothing for natural curves
-    const smoothX = prev.x * 0.2 + curr.x * 0.6 + next.x * 0.2;
-    const smoothY = prev.y * 0.2 + curr.y * 0.6 + next.y * 0.2;
+    // Apply very light weighted smoothing
+    const smoothX = prev.x * smoothingFactor + curr.x * (1 - 2 * smoothingFactor) + next.x * smoothingFactor;
+    const smoothY = prev.y * smoothingFactor + curr.y * (1 - 2 * smoothingFactor) + next.y * smoothingFactor;
     
     smoothed.push({ x: smoothX, y: smoothY });
   }
@@ -420,11 +365,14 @@ const findBisectorIntersection = (p1: Point, p2: Point, bisectorPoint: Point, bi
 export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
   const config = getDifficultyConfig(difficulty, 1);
   
-  // Generate proper map-like regions using Voronoi approach
+  // Generate proper map-like regions using clean Voronoi approach
   const regions = generateMapRegions(width, height, config.numRegions);
   
   // Find adjacencies between regions
   findAdjacencies(regions);
+  
+  console.log(`Found ${regions.length} regions with adjacencies:`, 
+    regions.map(r => `${r.id}:${r.adjacentRegions.length}`).join(', '));
   
   // Ensure connectivity - connect isolated regions
   regions.forEach(region => {
@@ -445,6 +393,7 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
       if (closestRegion) {
         region.adjacentRegions.push(closestRegion.id);
         closestRegion.adjacentRegions.push(region.id);
+        console.log(`Connected isolated region ${region.id} to ${closestRegion.id}`);
       }
     }
   });
