@@ -87,9 +87,9 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Level
             </span>
-            <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
+            <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in rounded-full font-bold">
               {level}
-            </Badge>
+            </div>
           </div>
         </div>
 
@@ -102,9 +102,9 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Minimum Colors
             </span>
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in rounded-full font-bold">
               {minimumColors}
-            </Badge>
+            </div>
           </div>
         </div>
 
@@ -128,9 +128,9 @@ export const GameStats: React.FC<GameStatsProps> = ({
                   />
                 ))
               ) : (
-                <Badge className="bg-gradient-to-r from-green-500 to-teal-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
+                <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in rounded-full font-bold">
                   0
-                </Badge>
+                </div>
               )}
             </div>
           </div>
@@ -145,9 +145,9 @@ export const GameStats: React.FC<GameStatsProps> = ({
               </div>
               Current Score
             </span>
-            <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in">
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in rounded-full font-bold">
               {currentScore}
-            </Badge>
+            </div>
           </div>
         </div>
 
