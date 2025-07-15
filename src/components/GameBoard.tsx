@@ -284,9 +284,9 @@ export const GameBoard: React.FC = () => {
             <Button 
               onClick={bailOut} 
               size="sm" 
-              variant="outline" 
+              variant="default" 
               disabled={gameEnded || !gameStarted}
-              className="text-sm"
+              className="text-sm bg-white text-black hover:bg-gray-200"
             >
               <Frown className="w-4 h-4 mr-1" />
               I bail
