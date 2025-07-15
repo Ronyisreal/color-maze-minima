@@ -189,7 +189,7 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   return regions;
 };
 
-// Generate geometric regions based on graph structure
+// Generate geometric regions based on graph structure - as one connected puzzle
 const generateGeometricRegionsFromGraph = (
   graphCalculator: GraphColoringCalculator, 
   width: number, 
@@ -197,84 +197,110 @@ const generateGeometricRegionsFromGraph = (
 ): Region[] => {
   const nodes = graphCalculator.getNodes();
   const regions: Region[] = [];
-  const margin = 40;
+  const margin = 60;
   
-  // Create a grid-like layout to ensure proper boundary connections
-  const cols = Math.ceil(Math.sqrt(nodes.length));
-  const rows = Math.ceil(nodes.length / cols);
+  // Create a single connected puzzle using Voronoi tessellation
+  const seeds: Point[] = [];
+  
+  // Generate seeds in a more connected pattern
+  const numNodes = nodes.length;
+  const cols = Math.ceil(Math.sqrt(numNodes * 1.2));
+  const rows = Math.ceil(numNodes / cols);
   
   const cellWidth = (width - 2 * margin) / cols;
   const cellHeight = (height - 2 * margin) / rows;
   
-  nodes.forEach((node, index) => {
-    const row = Math.floor(index / cols);
-    const col = index % cols;
+  // Create seeds with some randomization but ensuring connectivity
+  for (let i = 0; i < numNodes; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
     
-    // Calculate base position in grid
     const baseX = margin + col * cellWidth + cellWidth / 2;
     const baseY = margin + row * cellHeight + cellHeight / 2;
     
-    // Add some randomization while keeping regions connected
-    const jitterX = (Math.random() - 0.5) * cellWidth * 0.3;
-    const jitterY = (Math.random() - 0.5) * cellHeight * 0.3;
+    // Add controlled randomization to avoid perfect grid
+    const jitterX = (Math.random() - 0.5) * cellWidth * 0.4;
+    const jitterY = (Math.random() - 0.5) * cellHeight * 0.4;
     
-    const centerX = baseX + jitterX;
-    const centerY = baseY + jitterY;
-    
-    // Create shape vertices ensuring boundary connections
-    const vertices = createConnectedShapeVertices(
-      { x: centerX, y: centerY },
-      node,
-      graphCalculator,
-      cellWidth * 0.4,
-      cellHeight * 0.4
-    );
-    
-    regions.push({
-      id: node.id,
-      vertices,
-      center: { x: centerX, y: centerY },
-      color: null,
-      adjacentRegions: Array.from(node.adjacents)
+    seeds.push({
+      x: baseX + jitterX,
+      y: baseY + jitterY
     });
-  });
+  }
+  
+  // Create Voronoi cells that form a connected puzzle
+  for (let i = 0; i < seeds.length; i++) {
+    const seed = seeds[i];
+    const vertices = createVoronoiCell(seed, seeds, width, height);
+    
+    if (vertices.length >= 3) {
+      regions.push({
+        id: nodes[i].id,
+        vertices,
+        center: seed,
+        color: null,
+        adjacentRegions: []
+      });
+    }
+  }
   
   return regions;
 };
 
-// Create shape vertices that will connect properly with adjacent shapes
-const createConnectedShapeVertices = (
-  center: Point,
-  node: any,
-  graphCalculator: GraphColoringCalculator,
-  maxWidth: number,
-  maxHeight: number
-): Point[] => {
-  const numVertices = 6 + Math.floor(Math.random() * 3); // 6-8 vertices
-  const vertices: Point[] = [];
+// Create a Voronoi cell for connected puzzle
+const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
+  // Start with canvas boundaries
+  let clipVertices: Point[] = [
+    { x: 50, y: 50 },
+    { x: width - 50, y: 50 },
+    { x: width - 50, y: height - 50 },
+    { x: 50, y: height - 50 }
+  ];
   
-  for (let i = 0; i < numVertices; i++) {
-    const angle = (i / numVertices) * 2 * Math.PI;
+  // Clip against perpendicular bisectors of other seeds
+  for (const otherSeed of allSeeds) {
+    if (otherSeed === seed) continue;
     
-    // Vary radius based on direction and adjacency
-    let radiusX = maxWidth * (0.6 + Math.random() * 0.4);
-    let radiusY = maxHeight * (0.6 + Math.random() * 0.4);
-    
-    // Extend towards adjacent regions to ensure boundary connection
-    const adjacentCount = node.adjacents.size;
-    if (adjacentCount > 0) {
-      const extensionFactor = 1 + (adjacentCount * 0.1);
-      radiusX *= extensionFactor;
-      radiusY *= extensionFactor;
-    }
-    
-    const x = center.x + Math.cos(angle) * radiusX;
-    const y = center.y + Math.sin(angle) * radiusY;
-    
-    vertices.push({ x, y });
+    clipVertices = clipByPerpBisector(clipVertices, seed, otherSeed);
+    if (clipVertices.length < 3) break;
   }
   
-  return vertices;
+  return clipVertices;
+};
+
+// Clip polygon by perpendicular bisector
+const clipByPerpBisector = (vertices: Point[], seed1: Point, seed2: Point): Point[] => {
+  if (vertices.length === 0) return [];
+  
+  const midX = (seed1.x + seed2.x) / 2;
+  const midY = (seed1.y + seed2.y) / 2;
+  
+  const dx = seed2.x - seed1.x;
+  const dy = seed2.y - seed1.y;
+  
+  const result: Point[] = [];
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const current = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    const currentSide = (current.x - midX) * dx + (current.y - midY) * dy;
+    const nextSide = (next.x - midX) * dx + (next.y - midY) * dy;
+    
+    if (currentSide <= 0) {
+      result.push(current);
+    }
+    
+    if ((currentSide > 0) !== (nextSide > 0)) {
+      // Find intersection
+      const t = currentSide / (currentSide - nextSide);
+      const ix = current.x + t * (next.x - current.x);
+      const iy = current.y + t * (next.y - current.y);
+      result.push({ x: ix, y: iy });
+    }
+  }
+  
+  return result;
 };
 
 // Update adjacencies based on actual geometric boundaries
