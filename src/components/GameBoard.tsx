@@ -380,26 +380,7 @@ export const GameBoard: React.FC = () => {
                   </div>
                 )}
                 <svg width="100%" height="100%" className="absolute inset-0" viewBox="0 0 800 600">
-                  {regions.map(region => 
-                    region.adjacentRegions.map(adjId => {
-                      const adjRegion = regions.find(r => r.id === adjId);
-                      if (adjRegion && region.id < adjId) {
-                        return (
-                           <line
-                             key={`${region.id}-${adjId}`}
-                             x1={region.center.x}
-                             y1={region.center.y}
-                             x2={adjRegion.center.x}
-                             y2={adjRegion.center.y}
-                             stroke="#374151"
-                             strokeWidth="2"
-                             opacity="0.8"
-                           />
-                        );
-                      }
-                      return null;
-                    })
-                  )}
+                  {/* Removed adjacency lines - they shouldn't be visible to players */}
                   
                   {regions.map(region => {
                     const points = region.vertices.map(v => `${v.x},${v.y}`).join(' ');
