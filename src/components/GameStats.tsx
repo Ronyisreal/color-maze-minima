@@ -151,23 +151,9 @@ export const GameStats: React.FC<GameStatsProps> = ({
           </div>
         </div>
 
-        {/* Final score and grade only when completed */}
-        {gameCompleted && score && (
+        {/* Efficiency feedback when completed */}
+        {gameCompleted && (
           <div className="border-t pt-4 space-y-3 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Final Score</span>
-              <Badge variant="default" className="text-lg px-3 py-1">
-                {score.totalScore}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Grade</span>
-              <Badge className={`${getGradeColor(score.grade)} text-lg px-4 py-2`}>
-                {score.grade}
-              </Badge>
-            </div>
-
             <div className="text-center pt-2">
               <Badge variant={getEfficiencyColor()} className="text-sm px-4 py-2">
                 {getEfficiencyScore()}
@@ -192,7 +178,8 @@ export const GameStats: React.FC<GameStatsProps> = ({
               <strong className="text-blue-800 dark:text-blue-200">Scoring:</strong>
               <ul className="mt-1 space-y-0.5 text-blue-700 dark:text-blue-300">
                 <li>• +10 points per colored region</li>
-                <li>• Higher levels = more multiplier</li>
+                <li>• -10 penalty if more than minimum colors used</li>
+                <li>• Full marks for using minimum colors</li>
               </ul>
             </div>
           </div>

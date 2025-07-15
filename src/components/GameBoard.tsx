@@ -180,14 +180,26 @@ export const GameBoard: React.FC = () => {
       setGameCompleted(true);
       setGameStarted(false);
       
-      const scoreData = calculateScore(difficulty, minimumColors, usedColors, level);
-      const finalScore = { ...scoreData, totalScore: scoreData.totalScore + currentScore };
-      setScore(finalScore);
-      setTotalScore(prev => prev + finalScore.totalScore);
+      // New simplified scoring: full marks if minimum colors used, -10 if more colors used
+      let finalScore = currentScore;
+      if (usedColors > minimumColors) {
+        finalScore = Math.max(0, currentScore - 10);
+      }
       
+      const scoreData: ScoreData = { 
+        baseScore: 0, 
+        efficiencyBonus: 0, 
+        difficultyMultiplier: 1, 
+        totalScore: finalScore, 
+        grade: 'S' 
+      };
+      setScore(scoreData);
+      setTotalScore(prev => prev + finalScore);
+      
+      const efficiency = usedColors === minimumColors ? "Perfect efficiency!" : "Good job!";
       toast({
-        title: `Puzzle Completed! Grade: ${scoreData.grade} 🎉`,
-        description: `Score: ${finalScore.totalScore} points (${usedColors} colors used, minimum: ${minimumColors})`,
+        title: `Puzzle Completed! 🎉`,
+        description: `Score: ${finalScore} points (${usedColors} colors used, minimum: ${minimumColors}) - ${efficiency}`,
       });
     }
   };
