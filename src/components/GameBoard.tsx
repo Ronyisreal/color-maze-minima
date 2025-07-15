@@ -71,11 +71,11 @@ export const GameBoard: React.FC = () => {
     const boardWidth = 800;
     const boardHeight = 600;
     
-    const newRegions = generateLargeComplexShape(boardWidth, boardHeight, difficulty);
+    const config = getDifficultyConfig(difficulty, level);
+    const newRegions = generateLargeComplexShape(boardWidth, boardHeight, difficulty, level);
     console.log('Generated regions:', newRegions.length);
     
     const minColors = calculateMinimumColorsWelshPowell(newRegions);
-    const config = getDifficultyConfig(difficulty, level);
     const finalMinColors = Math.max(config.minColors, minColors);
     
     setMinimumColors(finalMinColors);
@@ -188,11 +188,8 @@ export const GameBoard: React.FC = () => {
       setGameCompleted(true);
       setGameStarted(false);
       
-      // New simplified scoring: full marks if minimum colors used, -10 if more colors used
-      let finalScore = currentScore;
-      if (usedColors > minimumColors) {
-        finalScore = Math.max(0, currentScore - 10);
-      }
+      // Simple scoring: just the points from coloring regions
+      const finalScore = currentScore;
       
       const scoreData: ScoreData = { 
         baseScore: 0, 
@@ -246,8 +243,16 @@ export const GameBoard: React.FC = () => {
   };
 
   const nextLevel = () => {
-    setLevel(level + 1);
-    resetGame();
+    const maxLevel = 3; // Each difficulty has 3 levels
+    if (level < maxLevel) {
+      setLevel(level + 1);
+      resetGame();
+    } else {
+      toast({
+        title: "Difficulty Completed! 🎊",
+        description: `You've completed all levels in ${difficulty} mode! Try a harder difficulty for more challenge.`,
+      });
+    }
   };
 
   const showHint = () => {
@@ -295,7 +300,7 @@ export const GameBoard: React.FC = () => {
     <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
-          <p className="text-white">Color all blocks using the minimum number of colors. No same colors can be connected!</p>
+          <p className="text-white">Color all pieces using the minimum number of colors. No same colors can be connected!</p>
           <div className="flex justify-center items-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-1">
               <span className="text-lg font-semibold text-emerald-400">Current Score: {currentScore}</span>
@@ -354,7 +359,7 @@ export const GameBoard: React.FC = () => {
                 <Lightbulb className="w-4 h-4 mr-2" />
                 Hint
               </Button>
-              {gameCompleted && (
+              {gameCompleted && level < 3 && (
                 <Button onClick={nextLevel} className="w-full">
                   <Trophy className="w-4 h-4 mr-2" />
                   Next Level

@@ -21,17 +21,33 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export const getDifficultyConfig = (difficulty: Difficulty, level: number): DifficultyConfig => {
   console.log('getDifficultyConfig called with:', { difficulty, level });
-  const baseConfigs = {
-    easy: { numRegions: 4 + Math.floor(Math.random() * 3), minColors: 3, complexity: 0.3 }, // 4-6 regions
-    medium: { numRegions: 7 + Math.floor(Math.random() * 4), minColors: 4, complexity: 0.5 }, // 7-10 regions  
-    hard: { numRegions: 11 + Math.floor(Math.random() * 5), minColors: 5, complexity: 0.7 } // 11-15 regions
-  };
   
-  const config = baseConfigs[difficulty];
+  let numRegions: number;
+  let minColors: number;
+  let complexity: number;
+  
+  switch (difficulty) {
+    case 'easy':
+      numRegions = 3 + level; // Level 1: 4 pieces, Level 2: 5 pieces, Level 3: 6 pieces
+      minColors = 3;
+      complexity = 0.3;
+      break;
+    case 'medium':
+      numRegions = 6 + level; // Level 1: 7 pieces, Level 2: 8 pieces, Level 3: 9 pieces
+      minColors = 4;
+      complexity = 0.5;
+      break;
+    case 'hard':
+      numRegions = 9 + level; // Level 1: 10 pieces, Level 2: 11 pieces, Level 3: 12 pieces
+      minColors = 5;
+      complexity = 0.7;
+      break;
+  }
+  
   const finalConfig = {
-    numRegions: Math.max(4, config.numRegions), // Ensure minimum 4 regions
-    minColors: config.minColors,
-    complexity: Math.min(config.complexity + (level - 1) * 0.05, 0.9)
+    numRegions,
+    minColors,
+    complexity: Math.min(complexity + (level - 1) * 0.05, 0.9)
   };
   
   console.log('Final difficulty config:', finalConfig);
@@ -366,10 +382,10 @@ const findBisectorIntersection = (p1: Point, p2: Point, bisectorPoint: Point, bi
   return null;
 };
 
-export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty): Region[] => {
-  console.log('Starting robust shape generation...', { width, height, difficulty });
+export const generateLargeComplexShape = (width: number, height: number, difficulty: Difficulty, level: number = 1): Region[] => {
+  console.log('Starting robust shape generation...', { width, height, difficulty, level });
   
-  const config = getDifficultyConfig(difficulty, 1);
+  const config = getDifficultyConfig(difficulty, level);
   
   // Use robust grid-based generation instead of Voronoi
   return generateRobustRegions(width, height, config.numRegions, difficulty);
