@@ -34,7 +34,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       icon: Star,
       description: 'Simple shapes',
       color: 'bg-green-500',
-      blocks: '4-6',
+      pieces: '4-6',
     },
     {
       id: 'medium' as Difficulty,
@@ -42,7 +42,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       icon: Zap,
       description: 'Mixed shapes',
       color: 'bg-yellow-500',
-      blocks: '7-10',
+      pieces: '7-9',
     },
     {
       id: 'hard' as Difficulty,
@@ -50,7 +50,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       icon: Flame,
       description: 'Complex shapes',
       color: 'bg-red-500',
-      blocks: '11-15',
+      pieces: '10-12',
     },
   ];
 
@@ -80,7 +80,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
                 <div className="flex-1 text-left min-w-0">
                   <div className="font-medium text-sm">{difficulty.name}</div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {difficulty.blocks} blocks
+                    {difficulty.pieces} pieces
                   </div>
                 </div>
               </div>
