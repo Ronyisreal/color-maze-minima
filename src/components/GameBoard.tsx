@@ -43,6 +43,7 @@ export const GameBoard: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(getTimeLimit('easy'));
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
+  const [availableColors, setAvailableColors] = useState(AVAILABLE_COLORS.slice(0, 3));
 
   useEffect(() => {
     if (gameStarted && !gameCompleted && !gameEnded && timeLeft > 0) {
@@ -75,8 +76,15 @@ export const GameBoard: React.FC = () => {
     
     const minColors = calculateMinimumColorsWelshPowell(newRegions);
     const config = getDifficultyConfig(difficulty, level);
-    setMinimumColors(Math.max(config.minColors, minColors));
+    const finalMinColors = Math.max(config.minColors, minColors);
+    
+    setMinimumColors(finalMinColors);
     setRegions(newRegions);
+    
+    // Generate random colors for the palette based on minimum colors needed
+    const shuffledColors = [...AVAILABLE_COLORS].sort(() => Math.random() - 0.5);
+    const selectedColors = shuffledColors.slice(0, finalMinColors);
+    setAvailableColors(selectedColors);
     
     // Reset current score to 0 for new puzzle
     setCurrentScore(0);
@@ -423,7 +431,7 @@ export const GameBoard: React.FC = () => {
             <Card className="p-4 mt-4">
               <h3 className="font-semibold mb-3">Color Palette</h3>
               <ColorPalette
-                colors={AVAILABLE_COLORS}
+                colors={availableColors}
                 selectedColor={selectedColor}
                 onColorSelect={setSelectedColor}
               />
