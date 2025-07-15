@@ -350,7 +350,6 @@ export const GameBoard: React.FC = () => {
                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
                     <div className="bg-white p-6 rounded-lg text-center">
                       <h2 className="text-2xl font-bold text-red-600 mb-2">Time's Up!</h2>
-                      <p className="text-gray-600 mb-4">Final Score: {currentScore}</p>
                       <Button onClick={resetGame}>Try Again</Button>
                     </div>
                   </div>
