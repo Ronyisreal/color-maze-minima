@@ -181,12 +181,50 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   // Verify and update adjacencies based on actual geometric boundaries
   updateGeometricAdjacencies(regions);
   
+  // Recalculate chromatic number based on actual geometric adjacencies
+  const actualChromaticNumber = calculateChromaticNumberFromRegions(regions);
+  console.log('Actual chromatic number from geometric adjacencies:', actualChromaticNumber);
+  
   console.log(`Generated ${regions.length} regions with proper boundary connections`);
   const regionsWithAdjacencies = regions.filter(r => r.adjacentRegions.length > 0);
   console.log(`Found ${regionsWithAdjacencies.length} regions with adjacencies:`, 
     regionsWithAdjacencies.map(r => `${r.id}:${r.adjacentRegions.length}`).join(', '));
   
   return regions;
+};
+
+// Calculate chromatic number from actual region adjacencies
+const calculateChromaticNumberFromRegions = (regions: Region[]): number => {
+  // Sort regions by degree (number of adjacent regions) in descending order
+  const sortedRegions = [...regions].sort((a, b) => b.adjacentRegions.length - a.adjacentRegions.length);
+  
+  // Color assignment map
+  const coloring = new Map<string, number>();
+  let maxColor = 0;
+
+  for (const region of sortedRegions) {
+    // Find the smallest color that can be assigned to this region
+    const usedColors = new Set<number>();
+    
+    // Check colors of adjacent regions
+    for (const adjacentId of region.adjacentRegions) {
+      if (coloring.has(adjacentId)) {
+        usedColors.add(coloring.get(adjacentId)!);
+      }
+    }
+
+    // Find the smallest available color
+    let color = 1;
+    while (usedColors.has(color)) {
+      color++;
+    }
+
+    coloring.set(region.id, color);
+    maxColor = Math.max(maxColor, color);
+    console.log(`Colored ${region.id} with color ${color} (adjacent to: ${region.adjacentRegions.join(', ')})`);
+  }
+
+  return maxColor;
 };
 
 // Generate geometric regions based on graph structure - as one connected puzzle
@@ -310,6 +348,8 @@ const updateGeometricAdjacencies = (regions: Region[]): void => {
     region.adjacentRegions = [];
   });
   
+  console.log('Updating geometric adjacencies for', regions.length, 'regions');
+  
   // Find actual geometric adjacencies
   for (let i = 0; i < regions.length; i++) {
     for (let j = i + 1; j < regions.length; j++) {
@@ -319,7 +359,13 @@ const updateGeometricAdjacencies = (regions: Region[]): void => {
       if (doRegionsShareBoundary(region1, region2)) {
         region1.adjacentRegions.push(region2.id);
         region2.adjacentRegions.push(region1.id);
+        console.log(`Found adjacency: ${region1.id} <-> ${region2.id}`);
       }
     }
   }
+  
+  // Log all adjacencies
+  regions.forEach(region => {
+    console.log(`${region.id} is adjacent to: [${region.adjacentRegions.join(', ')}]`);
+  });
 };
