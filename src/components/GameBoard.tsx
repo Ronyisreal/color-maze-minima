@@ -76,7 +76,7 @@ export const GameBoard: React.FC = () => {
     console.log('Generated regions:', newRegions.length);
     
     const minColors = calculateMinimumColorsWelshPowell(newRegions);
-    const finalMinColors = Math.max(config.minColors, minColors);
+    const finalMinColors = minColors; // Use actual calculated chromatic number
     
     setMinimumColors(finalMinColors);
     setRegions(newRegions);
