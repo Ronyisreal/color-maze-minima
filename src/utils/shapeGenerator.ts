@@ -69,7 +69,16 @@ const calculateCentroid = (vertices: Point[]): Point => {
 
 // Check if two polygons share a boundary
 const doRegionsShareBoundary = (region1: Region, region2: Region): boolean => {
-  const tolerance = 5; // Tolerance for boundary detection
+  const tolerance = 15; // Increased tolerance for better boundary detection
+  
+  // First check center-to-center distance for quick filtering
+  const centerDistance = distance(region1.center, region2.center);
+  const maxDistance = Math.max(
+    Math.max(...region1.vertices.map(v => distance(v, region1.center))),
+    Math.max(...region2.vertices.map(v => distance(v, region2.center)))
+  ) * 2.2; // Regions must be reasonably close
+  
+  if (centerDistance > maxDistance) return false;
   
   // Check if any vertices are close enough to indicate shared boundary
   for (const v1 of region1.vertices) {
@@ -80,7 +89,7 @@ const doRegionsShareBoundary = (region1: Region, region2: Region): boolean => {
     }
   }
   
-  // Check edge-to-edge proximity for shared boundaries
+  // More thorough edge-to-edge proximity check
   for (let i = 0; i < region1.vertices.length; i++) {
     const edge1Start = region1.vertices[i];
     const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
@@ -89,7 +98,8 @@ const doRegionsShareBoundary = (region1: Region, region2: Region): boolean => {
       const edge2Start = region2.vertices[j];
       const edge2End = region2.vertices[(j + 1) % region2.vertices.length];
       
-      if (edgeToEdgeDistance(edge1Start, edge1End, edge2Start, edge2End) < tolerance) {
+      const edgeDist = edgeToEdgeDistance(edge1Start, edge1End, edge2Start, edge2End);
+      if (edgeDist < tolerance) {
         return true;
       }
     }
