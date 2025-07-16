@@ -388,9 +388,9 @@ export const GameBoard: React.FC = () => {
                       <g key={region.id}>
                         <polygon
                           points={points}
-                          fill={region.color || '#ffffff'}
-                          stroke={region.color ? '#374151' : '#9ca3af'}
-                          strokeWidth="1"
+                          fill={region.color || '#f3f4f6'}
+                          stroke={region.color ? '#374151' : '#1f2937'}
+                          strokeWidth="2"
                           className={`cursor-pointer hover:stroke-gray-800 transition-all duration-200 ${gameEnded ? 'pointer-events-none' : ''}`}
                           onClick={() => handleRegionColor(region.id)}
                         />
