@@ -171,7 +171,7 @@ export const GameBoard: React.FC = () => {
     for (const adjacentId of currentRegion.adjacentRegions) {
       const adjacentRegion = allRegions.find(r => r.id === adjacentId);
       if (adjacentRegion && adjacentRegion.color === color) {
-        console.log(`Conflict detected: Region ${regionId} conflicts with adjacent region ${adjacentId}`);
+        console.log(`CONFLICT: Region ${regionId} conflicts with adjacent region ${adjacentId} (both have color ${color})`);
         return true;
       }
     }
