@@ -614,3 +614,13 @@ All colors MUST be HSL.
     filter: hue-rotate(15deg);
   }
 }
+@keyframes spinY {
+  to {
+    transform: rotateY(360deg);
+  }
+}
+.spin-coin {
+  animation: spinY 1.6s linear infinite;
+  display: inline-block;
+  will-change: transform;
+}

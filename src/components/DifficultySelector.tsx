@@ -34,7 +34,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       icon: Star,
       description: 'Simple shapes',
       color: 'bg-green-500',
-      pieces: '4-6',
+      pieces: '4-7',
     },
     {
       id: 'medium' as Difficulty,
@@ -42,7 +42,7 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       icon: Zap,
       description: 'Mixed shapes',
       color: 'bg-yellow-500',
-      pieces: '7-9',
+      pieces: '8-11',
     },
     {
       id: 'hard' as Difficulty,
@@ -50,17 +50,14 @@ export const DifficultySelector: React.FC<DifficultySelectorProps> = ({
       icon: Flame,
       description: 'Complex shapes',
       color: 'bg-red-500',
-      pieces: '10-12',
+      pieces: '12-15',
     },
   ];
 
   return (
     <Card className="p-4">
       <h3 className="font-bold text-xl flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
-        <div className="relative overflow-hidden">
-          <Star className="w-6 h-6 text-purple-600" />
-          <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent w-full h-full ${showAnimation ? 'animate-shine-glare' : ''}`}></div>
-        </div>
+        <Star className="w-6 h-6 text-purple-600 spin-coin" />
         Difficulty Level
       </h3>
       <div className="space-y-2">
