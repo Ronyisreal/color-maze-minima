@@ -251,12 +251,12 @@ const generateGeometricRegionsFromGraph = (
   const regions: Region[] = [];
   const margin = 60;
   
-  // Create a planar map where adjacent regions share borders
-  const mapRegions = createConnectedPlanarMap(nodes, width, height, margin);
+  // Create a seamless connected map with shared boundaries
+  const mapData = createSeamlessConnectedMap(nodes, width, height, margin);
   
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    const regionData = mapRegions[i];
+    const regionData = mapData.regions[i];
     
     regions.push({
       id: node.id,
@@ -270,120 +270,205 @@ const generateGeometricRegionsFromGraph = (
   return regions;
 };
 
-const createConnectedPlanarMap = (
+const createSeamlessConnectedMap = (
   nodes: any[],
   width: number,
   height: number,
   margin: number
-): { vertices: Point[]; center: Point }[] => {
+): { regions: { vertices: Point[]; center: Point }[] } => {
   const workingWidth = width - 2 * margin;
   const workingHeight = height - 2 * margin;
-  
-  // Create a grid-based structure for easier border sharing
   const numNodes = nodes.length;
-  const cols = Math.ceil(Math.sqrt(numNodes));
-  const rows = Math.ceil(numNodes / cols);
   
-  const cellWidth = workingWidth / cols;
-  const cellHeight = workingHeight / rows;
+  // Create a network of connected control points
+  const controlPoints = generateControlPointNetwork(workingWidth, workingHeight, margin, numNodes);
   
-  const regions: { vertices: Point[]; center: Point }[] = [];
+  // Generate organic boundaries between regions
+  const boundaries = generateOrganicBoundaries(controlPoints, nodes);
   
-  // Create grid of control points with some randomization
-  const controlPoints: Point[][] = [];
-  for (let row = 0; row <= rows; row++) {
-    controlPoints[row] = [];
-    for (let col = 0; col <= cols; col++) {
-      let x = margin + col * cellWidth;
-      let y = margin + row * cellHeight;
-      
-      // Add randomization to interior points (not borders)
-      if (row > 0 && row < rows && col > 0 && col < cols) {
-        x += (Math.random() - 0.5) * cellWidth * 0.4;
-        y += (Math.random() - 0.5) * cellHeight * 0.4;
-      }
-      
-      controlPoints[row][col] = { x, y };
-    }
-  }
+  // Create regions from the boundary network
+  const regions = createRegionsFromBoundaries(boundaries, controlPoints, nodes);
   
-  // Create regions from grid cells
-  for (let i = 0; i < numNodes; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    
-    if (row < rows && col < cols) {
-      // Create region from grid cell using control points
-      const vertices = createRegionFromGridCell(controlPoints, row, col, rows, cols);
-      const center = calculateCentroid(vertices);
-      
-      regions.push({ vertices, center });
-    }
-  }
-  
-  return regions;
+  return { regions };
 };
 
-const createRegionFromGridCell = (
-  controlPoints: Point[][],
-  row: number,
-  col: number,
-  maxRows: number,
-  maxCols: number
+const generateControlPointNetwork = (
+  width: number,
+  height: number,
+  margin: number,
+  numNodes: number
 ): Point[] => {
-  const vertices: Point[] = [];
+  const points: Point[] = [];
   
-  // Get the four corners of the grid cell
-  const topLeft = controlPoints[row][col];
-  const topRight = controlPoints[row][col + 1];
-  const bottomLeft = controlPoints[row + 1][col];
-  const bottomRight = controlPoints[row + 1][col + 1];
+  // Create a roughly circular/organic arrangement of control points
+  const centerX = margin + width / 2;
+  const centerY = margin + height / 2;
+  const baseRadius = Math.min(width, height) * 0.3;
   
-  // Create a more organic shape by adding intermediate points
-  // Top edge
-  vertices.push(topLeft);
-  vertices.push(interpolateWithVariation(topLeft, topRight, 0.3));
-  vertices.push(interpolateWithVariation(topLeft, topRight, 0.7));
-  vertices.push(topRight);
+  for (let i = 0; i < numNodes; i++) {
+    const angle = (i / numNodes) * 2 * Math.PI;
+    const radiusVariation = 0.7 + Math.random() * 0.6; // 70%-130% variation
+    const angleVariation = (Math.random() - 0.5) * 0.5; // Some angular variation
+    
+    const actualAngle = angle + angleVariation;
+    const actualRadius = baseRadius * radiusVariation;
+    
+    const x = centerX + Math.cos(actualAngle) * actualRadius;
+    const y = centerY + Math.sin(actualAngle) * actualRadius;
+    
+    points.push({ x, y });
+  }
   
-  // Right edge
-  vertices.push(interpolateWithVariation(topRight, bottomRight, 0.3));
-  vertices.push(interpolateWithVariation(topRight, bottomRight, 0.7));
-  vertices.push(bottomRight);
-  
-  // Bottom edge
-  vertices.push(interpolateWithVariation(bottomRight, bottomLeft, 0.3));
-  vertices.push(interpolateWithVariation(bottomRight, bottomLeft, 0.7));
-  vertices.push(bottomLeft);
-  
-  // Left edge
-  vertices.push(interpolateWithVariation(bottomLeft, topLeft, 0.3));
-  vertices.push(interpolateWithVariation(bottomLeft, topLeft, 0.7));
-  
-  return vertices;
+  return points;
 };
 
-const interpolateWithVariation = (p1: Point, p2: Point, t: number): Point => {
-  const baseX = p1.x + (p2.x - p1.x) * t;
-  const baseY = p1.y + (p2.y - p1.y) * t;
+const generateOrganicBoundaries = (
+  controlPoints: Point[],
+  nodes: any[]
+): Map<string, Point[]> => {
+  const boundaries = new Map<string, Point[]>();
   
-  // Add some perpendicular variation to make edges more organic
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
+  // For each pair of adjacent nodes, create a curved boundary
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const nodePoint = controlPoints[i];
+    
+    for (const adjacentId of node.adjacents) {
+      const adjacentIndex = nodes.findIndex(n => n.id === adjacentId);
+      if (adjacentIndex !== -1 && adjacentIndex > i) { // Avoid duplicate boundaries
+        const adjacentPoint = controlPoints[adjacentIndex];
+        const boundaryKey = `${node.id}-${adjacentId}`;
+        
+        // Create a curved boundary line between the two points
+        const boundaryPoints = createCurvedBoundary(nodePoint, adjacentPoint);
+        boundaries.set(boundaryKey, boundaryPoints);
+      }
+    }
+  }
+  
+  return boundaries;
+};
+
+const createCurvedBoundary = (point1: Point, point2: Point): Point[] => {
+  const points: Point[] = [];
+  const numSegments = 8;
+  
+  // Create a curved path between the two points
+  const midX = (point1.x + point2.x) / 2;
+  const midY = (point1.y + point2.y) / 2;
+  
+  // Add some perpendicular offset to create curves
+  const dx = point2.x - point1.x;
+  const dy = point2.y - point1.y;
   const length = Math.sqrt(dx * dx + dy * dy);
   
   if (length > 0) {
     const perpX = -dy / length;
     const perpY = dx / length;
-    const variation = (Math.random() - 0.5) * length * 0.1;
+    const maxOffset = length * 0.3 * (Math.random() - 0.5);
     
-    return {
-      x: baseX + perpX * variation,
-      y: baseY + perpY * variation
-    };
+    for (let i = 0; i <= numSegments; i++) {
+      const t = i / numSegments;
+      const baseX = point1.x + (point2.x - point1.x) * t;
+      const baseY = point1.y + (point2.y - point1.y) * t;
+      
+      // Apply curved offset (stronger in the middle)
+      const offsetStrength = Math.sin(t * Math.PI) * maxOffset;
+      const x = baseX + perpX * offsetStrength;
+      const y = baseY + perpY * offsetStrength;
+      
+      points.push({ x, y });
+    }
   }
   
-  return { x: baseX, y: baseY };
+  return points;
+};
+
+const createRegionsFromBoundaries = (
+  boundaries: Map<string, Point[]>,
+  controlPoints: Point[],
+  nodes: any[]
+): { vertices: Point[]; center: Point }[] => {
+  const regions: { vertices: Point[]; center: Point }[] = [];
+  
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const centerPoint = controlPoints[i];
+    
+    // Create a region by expanding outward from the center
+    const vertices = createOrganicRegionShape(centerPoint, node.adjacents, controlPoints, nodes, boundaries);
+    
+    regions.push({
+      vertices,
+      center: centerPoint
+    });
+  }
+  
+  return regions;
+};
+
+const createOrganicRegionShape = (
+  centerPoint: Point,
+  adjacentIds: Set<string>,
+  controlPoints: Point[],
+  nodes: any[],
+  boundaries: Map<string, Point[]>
+): Point[] => {
+  const vertices: Point[] = [];
+  const radius = 40 + Math.random() * 30; // 40-70 pixel radius
+  const numBaseVertices = 8 + Math.floor(Math.random() * 4); // 8-11 vertices
+  
+  // Create organic shape around the center point
+  for (let i = 0; i < numBaseVertices; i++) {
+    const angle = (i / numBaseVertices) * 2 * Math.PI;
+    const radiusVariation = 0.6 + Math.random() * 0.8; // 60%-140% variation
+    const angleVariation = (Math.random() - 0.5) * 0.3; // ±15% angle variation
+    
+    const actualAngle = angle + angleVariation;
+    const actualRadius = radius * radiusVariation;
+    
+    const x = centerPoint.x + Math.cos(actualAngle) * actualRadius;
+    const y = centerPoint.y + Math.sin(actualAngle) * actualRadius;
+    
+    vertices.push({ x, y });
+  }
+  
+  // Add some additional random points for more organic feel
+  for (let i = 0; i < 3; i++) {
+    const angle = Math.random() * 2 * Math.PI;
+    const r = radius * (0.5 + Math.random() * 0.5);
+    const x = centerPoint.x + Math.cos(angle) * r;
+    const y = centerPoint.y + Math.sin(angle) * r;
+    vertices.push({ x, y });
+  }
+  
+  // Sort vertices by angle to create proper polygon
+  vertices.sort((a, b) => {
+    const angleA = Math.atan2(a.y - centerPoint.y, a.x - centerPoint.x);
+    const angleB = Math.atan2(b.y - centerPoint.y, b.x - centerPoint.x);
+    return angleA - angleB;
+  });
+  
+  // Smooth the shape by applying curve smoothing
+  return smoothPolygon(vertices);
+};
+
+const smoothPolygon = (vertices: Point[]): Point[] => {
+  const smoothed: Point[] = [];
+  const smoothingFactor = 0.3;
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const prev = vertices[(i - 1 + vertices.length) % vertices.length];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    
+    const smoothedX = curr.x + smoothingFactor * ((prev.x + next.x) / 2 - curr.x);
+    const smoothedY = curr.y + smoothingFactor * ((prev.y + next.y) / 2 - curr.y);
+    
+    smoothed.push({ x: smoothedX, y: smoothedY });
+  }
+  
+  return smoothed;
 };
 
 
