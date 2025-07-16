@@ -182,9 +182,9 @@ export function drawRegions(regions: Region[], canvas: HTMLCanvasElement, config
     const points = subdividedVertices.map(v => [v.x, v.y] as [number, number]);
     rc.polygon(points, {
       stroke: 'black',
-      strokeWidth: 2,
-      roughness: 1.5,
-      bowing: 1.5,
+      strokeWidth: 3,
+      roughness: 2.5,
+      bowing: 2.0,
       fill: 'none'
     });
   });
@@ -212,35 +212,37 @@ const generateGeometricRegionsFromGraph = (
   const regions: Region[] = [];
   const margin = 60;
   const numNodes = nodes.length;
-  const cols = Math.ceil(Math.sqrt(numNodes * 1.2));
-  const rows = Math.ceil(numNodes / cols);
 
-  const cellWidth = (width - 2 * margin) / cols;
-  const cellHeight = (height - 2 * margin) / rows;
+  // Create organic blob-like shapes
+  const centers: Point[] = [];
+  const usedWidth = width - 2 * margin;
+  const usedHeight = height - 2 * margin;
 
-  const seeds: Point[] = [];
+  // Generate centers with organic spacing
   for (let i = 0; i < numNodes; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const baseX = margin + col * cellWidth + cellWidth / 2;
-    const baseY = margin + row * cellHeight + cellHeight / 2;
-    const jitterX = (Math.random() - 0.5) * cellWidth * 0.4;
-    const jitterY = (Math.random() - 0.5) * cellHeight * 0.4;
-    seeds.push({
-      x: baseX + jitterX,
-      y: baseY + jitterY
-    });
+    let center: Point;
+    let attempts = 0;
+    do {
+      center = {
+        x: margin + Math.random() * usedWidth,
+        y: margin + Math.random() * usedHeight
+      };
+      attempts++;
+    } while (attempts < 50 && centers.some(c => distance(c, center) < Math.min(usedWidth, usedHeight) / (numNodes * 0.3)));
+    
+    centers.push(center);
   }
 
-  for (let i = 0; i < seeds.length; i++) {
-    const seed = seeds[i];
-    const vertices = createVoronoiCell(seed, seeds, width, height);
-
+  // Create organic shapes for each center
+  for (let i = 0; i < centers.length; i++) {
+    const center = centers[i];
+    const vertices = createOrganicShape(center, width, height, i, numNodes);
+    
     if (vertices.length >= 3) {
       regions.push({
         id: nodes[i].id,
         vertices,
-        center: seed,
+        center,
         color: null,
         adjacentRegions: []
       });
@@ -250,53 +252,61 @@ const generateGeometricRegionsFromGraph = (
   return regions;
 };
 
-const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
-  let clipVertices: Point[] = [
-    { x: 50, y: 50 },
-    { x: width - 50, y: 50 },
-    { x: width - 50, y: height - 50 },
-    { x: 50, y: height - 50 }
-  ];
+const createOrganicShape = (center: Point, width: number, height: number, index: number, totalShapes: number): Point[] => {
+  const vertices: Point[] = [];
+  const baseRadius = Math.min(width, height) / (totalShapes * 0.6);
+  const numVertices = 8 + Math.floor(Math.random() * 6); // 8-14 vertices for organic shape
   
-  for (const otherSeed of allSeeds) {
-    if (otherSeed === seed) continue;
-    clipVertices = clipByPerpBisector(clipVertices, seed, otherSeed);
-    if (clipVertices.length < 3) break;
+  // Create organic blob using noise and randomness
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * 2 * Math.PI;
+    
+    // Add multiple noise layers for organic variation
+    const noise1 = Math.sin(angle * 2 + index) * 0.4;
+    const noise2 = Math.sin(angle * 3 + index * 1.3) * 0.3;
+    const noise3 = Math.sin(angle * 5 + index * 2.1) * 0.2;
+    const randomNoise = (Math.random() - 0.5) * 0.6;
+    
+    const radiusVariation = 1 + noise1 + noise2 + noise3 + randomNoise;
+    const radius = baseRadius * Math.max(0.3, radiusVariation);
+    
+    // Add angular variation for more organic shapes
+    const angleVariation = (Math.random() - 0.5) * 0.4;
+    const adjustedAngle = angle + angleVariation;
+    
+    const x = center.x + Math.cos(adjustedAngle) * radius;
+    const y = center.y + Math.sin(adjustedAngle) * radius;
+    
+    // Keep within bounds with some margin
+    const margin = 60;
+    const clampedX = Math.max(margin, Math.min(width - margin, x));
+    const clampedY = Math.max(margin, Math.min(height - margin, y));
+    
+    vertices.push({ x: clampedX, y: clampedY });
   }
   
-  return clipVertices;
+  // Apply smoothing to make shapes more organic
+  const smoothed = smoothOrganicShape(vertices);
+  return smoothed;
 };
 
-const clipByPerpBisector = (vertices: Point[], seed1: Point, seed2: Point): Point[] => {
-  if (vertices.length === 0) return [];
+const smoothOrganicShape = (vertices: Point[]): Point[] => {
+  const smoothed: Point[] = [];
+  const numVertices = vertices.length;
   
-  const midX = (seed1.x + seed2.x) / 2;
-  const midY = (seed1.y + seed2.y) / 2;
-  const dx = seed2.x - seed1.x;
-  const dy = seed2.y - seed1.y;
-  
-  const result: Point[] = [];
-  
-  for (let i = 0; i < vertices.length; i++) {
-    const current = vertices[i];
-    const next = vertices[(i + 1) % vertices.length];
+  for (let i = 0; i < numVertices; i++) {
+    const prev = vertices[(i - 1 + numVertices) % numVertices];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % numVertices];
     
-    const currentSide = (current.x - midX) * dx + (current.y - midY) * dy;
-    const nextSide = (next.x - midX) * dx + (next.y - midY) * dy;
+    // Simple smoothing using weighted average
+    const smoothX = 0.1 * prev.x + 0.8 * curr.x + 0.1 * next.x;
+    const smoothY = 0.1 * prev.y + 0.8 * curr.y + 0.1 * next.y;
     
-    if (currentSide <= 0) {
-      result.push(current);
-    }
-    
-    if ((currentSide > 0) !== (nextSide > 0)) {
-      const t = currentSide / (currentSide - nextSide);
-      const ix = current.x + t * (next.x - current.x);
-      const iy = current.y + t * (next.y - current.y);
-      result.push({ x: ix, y: iy });
-    }
+    smoothed.push({ x: smoothX, y: smoothY });
   }
   
-  return result;
+  return smoothed;
 };
 
 const updateGeometricAdjacencies = (regions: Region[]): void => {
