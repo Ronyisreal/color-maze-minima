@@ -152,7 +152,20 @@ export const GameBoard: React.FC = () => {
 
   const isColorConflict = (regionId: string, color: string, allRegions: Region[]): boolean => {
     const currentRegion = allRegions.find(r => r.id === regionId);
-    if (!currentRegion) return false;
+    if (!currentRegion) {
+      console.log(`Region ${regionId} not found in allRegions`);
+      return false;
+    }
+    
+    console.log(`Checking color conflict for region ${regionId} with color ${color}`);
+    console.log(`Region ${regionId} adjacents:`, currentRegion.adjacentRegions);
+    
+    // Check all regions to see their current colors
+    allRegions.forEach(region => {
+      if (region.color === color) {
+        console.log(`Region ${region.id} already has color ${color}`);
+      }
+    });
     
     // Use the adjacency information already calculated during region generation
     for (const adjacentId of currentRegion.adjacentRegions) {
@@ -163,6 +176,7 @@ export const GameBoard: React.FC = () => {
       }
     }
     
+    console.log(`No conflict found for region ${regionId} with color ${color}`);
     return false;
   };
 
