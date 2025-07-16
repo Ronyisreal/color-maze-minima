@@ -180,13 +180,34 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   return regions;
 };
 
-// Calculate chromatic number from actual region adjacencies
+// Calculate chromatic number from actual region adjacencies using backtracking
 const calculateChromaticNumberFromRegions = (regions: Region[]): number => {
+<<<<<<< HEAD
   const sortedRegions = [...regions].sort((a, b) => b.adjacentRegions.length - a.adjacentRegions.length);
 
-  const coloring = new Map<string, number>();
-  let maxColor = 0;
+=======
+  if (regions.length === 0) return 0;
+  if (regions.length === 1) return 1;
+  
+  // Try coloring with k colors, starting from 1
+  for (let k = 1; k <= regions.length; k++) {
+    if (canColorRegionsWithKColors(regions, k)) {
+      return k;
+    }
+  }
+  
+  // Fallback (should never reach here for valid graphs)
+  return regions.length;
+};
 
+// Check if regions can be colored with k colors using backtracking
+const canColorRegionsWithKColors = (regions: Region[], k: number): boolean => {
+>>>>>>> b8f4b6e7f9b48819593ab527f865bd92cb652524
+  const coloring = new Map<string, number>();
+  return backtrackColorRegions(regions, 0, k, coloring);
+};
+
+<<<<<<< HEAD
   for (const region of sortedRegions) {
     const usedColors = new Set<number>();
     for (const adjacentId of region.adjacentRegions) {
@@ -200,9 +221,46 @@ const calculateChromaticNumberFromRegions = (regions: Region[]): number => {
     }
     coloring.set(region.id, color);
     maxColor = Math.max(maxColor, color);
+=======
+// Backtracking function to try all possible colorings for regions
+const backtrackColorRegions = (regions: Region[], regionIndex: number, k: number, coloring: Map<string, number>): boolean => {
+  // Base case: all regions are colored
+  if (regionIndex === regions.length) {
+    return true;
+>>>>>>> b8f4b6e7f9b48819593ab527f865bd92cb652524
   }
 
-  return maxColor;
+  const currentRegion = regions[regionIndex];
+  
+  // Try each color from 1 to k
+  for (let color = 1; color <= k; color++) {
+    if (isSafeToColorRegion(currentRegion, color, coloring)) {
+      // Assign color to current region
+      coloring.set(currentRegion.id, color);
+      
+      // Recursively try to color remaining regions
+      if (backtrackColorRegions(regions, regionIndex + 1, k, coloring)) {
+        return true;
+      }
+      
+      // Backtrack: remove color assignment
+      coloring.delete(currentRegion.id);
+    }
+  }
+  
+  // No valid coloring found
+  return false;
+};
+
+// Check if it's safe to assign a color to a region
+const isSafeToColorRegion = (region: Region, color: number, coloring: Map<string, number>): boolean => {
+  // Check if any adjacent region has the same color
+  for (const adjacentId of region.adjacentRegions) {
+    if (coloring.has(adjacentId) && coloring.get(adjacentId) === color) {
+      return false;
+    }
+  }
+  return true;
 };
 
 const generateGeometricRegionsFromGraph = (
