@@ -251,21 +251,17 @@ const generateGeometricRegionsFromGraph = (
   const regions: Region[] = [];
   const margin = 60;
   
-  // Create a more organic layout using recursive space division
-  const regionBounds = createMapRegions(nodes, width, height, margin);
+  // Create a planar map where adjacent regions share borders
+  const mapRegions = createConnectedPlanarMap(nodes, width, height, margin);
   
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    const bounds = regionBounds[i];
-    
-    // Generate irregular polygon for this region
-    const vertices = generateIrregularPolygon(bounds, 6 + Math.floor(Math.random() * 4)); // 6-9 vertices
-    const center = calculateCentroid(vertices);
+    const regionData = mapRegions[i];
     
     regions.push({
       id: node.id,
-      vertices,
-      center,
+      vertices: regionData.vertices,
+      center: regionData.center,
       color: null,
       adjacentRegions: Array.from(node.adjacents)
     });
@@ -274,111 +270,120 @@ const generateGeometricRegionsFromGraph = (
   return regions;
 };
 
-interface RegionBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-const createMapRegions = (
+const createConnectedPlanarMap = (
   nodes: any[],
   width: number,
   height: number,
   margin: number
-): RegionBounds[] => {
-  const bounds: RegionBounds[] = [];
+): { vertices: Point[]; center: Point }[] => {
   const workingWidth = width - 2 * margin;
   const workingHeight = height - 2 * margin;
   
-  // Use a recursive subdivision approach to create map-like regions
-  const areas = subdivideArea(
-    { x: margin, y: margin, width: workingWidth, height: workingHeight },
-    nodes.length,
-    0
-  );
+  // Create a grid-based structure for easier border sharing
+  const numNodes = nodes.length;
+  const cols = Math.ceil(Math.sqrt(numNodes));
+  const rows = Math.ceil(numNodes / cols);
   
-  // Add some randomness to make regions more organic
-  return areas.map(area => ({
-    x: area.x + (Math.random() - 0.5) * area.width * 0.2,
-    y: area.y + (Math.random() - 0.5) * area.height * 0.2,
-    width: area.width * (0.8 + Math.random() * 0.4),
-    height: area.height * (0.8 + Math.random() * 0.4)
-  }));
-};
-
-const subdivideArea = (
-  area: RegionBounds,
-  numRegions: number,
-  depth: number
-): RegionBounds[] => {
-  if (numRegions <= 1 || depth > 4) {
-    return [area];
+  const cellWidth = workingWidth / cols;
+  const cellHeight = workingHeight / rows;
+  
+  const regions: { vertices: Point[]; center: Point }[] = [];
+  
+  // Create grid of control points with some randomization
+  const controlPoints: Point[][] = [];
+  for (let row = 0; row <= rows; row++) {
+    controlPoints[row] = [];
+    for (let col = 0; col <= cols; col++) {
+      let x = margin + col * cellWidth;
+      let y = margin + row * cellHeight;
+      
+      // Add randomization to interior points (not borders)
+      if (row > 0 && row < rows && col > 0 && col < cols) {
+        x += (Math.random() - 0.5) * cellWidth * 0.4;
+        y += (Math.random() - 0.5) * cellHeight * 0.4;
+      }
+      
+      controlPoints[row][col] = { x, y };
+    }
   }
   
-  const isHorizontalSplit = area.width > area.height;
-  const splitRatio = 0.4 + Math.random() * 0.2; // 40%-60% split
-  
-  if (isHorizontalSplit) {
-    const splitX = area.x + area.width * splitRatio;
-    const leftRegions = Math.floor(numRegions * splitRatio);
-    const rightRegions = numRegions - leftRegions;
+  // Create regions from grid cells
+  for (let i = 0; i < numNodes; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
     
-    return [
-      ...subdivideArea(
-        { x: area.x, y: area.y, width: splitX - area.x, height: area.height },
-        leftRegions,
-        depth + 1
-      ),
-      ...subdivideArea(
-        { x: splitX, y: area.y, width: area.x + area.width - splitX, height: area.height },
-        rightRegions,
-        depth + 1
-      )
-    ];
-  } else {
-    const splitY = area.y + area.height * splitRatio;
-    const topRegions = Math.floor(numRegions * splitRatio);
-    const bottomRegions = numRegions - topRegions;
-    
-    return [
-      ...subdivideArea(
-        { x: area.x, y: area.y, width: area.width, height: splitY - area.y },
-        topRegions,
-        depth + 1
-      ),
-      ...subdivideArea(
-        { x: area.x, y: splitY, width: area.width, height: area.y + area.height - splitY },
-        bottomRegions,
-        depth + 1
-      )
-    ];
+    if (row < rows && col < cols) {
+      // Create region from grid cell using control points
+      const vertices = createRegionFromGridCell(controlPoints, row, col, rows, cols);
+      const center = calculateCentroid(vertices);
+      
+      regions.push({ vertices, center });
+    }
   }
+  
+  return regions;
 };
 
-const generateIrregularPolygon = (bounds: RegionBounds, numVertices: number): Point[] => {
+const createRegionFromGridCell = (
+  controlPoints: Point[][],
+  row: number,
+  col: number,
+  maxRows: number,
+  maxCols: number
+): Point[] => {
   const vertices: Point[] = [];
-  const centerX = bounds.x + bounds.width / 2;
-  const centerY = bounds.y + bounds.height / 2;
-  const radiusX = bounds.width * 0.4;
-  const radiusY = bounds.height * 0.4;
   
-  for (let i = 0; i < numVertices; i++) {
-    const angle = (i / numVertices) * 2 * Math.PI;
-    const radiusVariation = 0.6 + Math.random() * 0.8; // 60%-140% of base radius
-    const angleVariation = (Math.random() - 0.5) * 0.3; // ±15% angle variation
-    
-    const actualAngle = angle + angleVariation;
-    const x = centerX + Math.cos(actualAngle) * radiusX * radiusVariation;
-    const y = centerY + Math.sin(actualAngle) * radiusY * radiusVariation;
-    
-    vertices.push({
-      x: Math.max(bounds.x, Math.min(bounds.x + bounds.width, x)),
-      y: Math.max(bounds.y, Math.min(bounds.y + bounds.height, y))
-    });
-  }
+  // Get the four corners of the grid cell
+  const topLeft = controlPoints[row][col];
+  const topRight = controlPoints[row][col + 1];
+  const bottomLeft = controlPoints[row + 1][col];
+  const bottomRight = controlPoints[row + 1][col + 1];
+  
+  // Create a more organic shape by adding intermediate points
+  // Top edge
+  vertices.push(topLeft);
+  vertices.push(interpolateWithVariation(topLeft, topRight, 0.3));
+  vertices.push(interpolateWithVariation(topLeft, topRight, 0.7));
+  vertices.push(topRight);
+  
+  // Right edge
+  vertices.push(interpolateWithVariation(topRight, bottomRight, 0.3));
+  vertices.push(interpolateWithVariation(topRight, bottomRight, 0.7));
+  vertices.push(bottomRight);
+  
+  // Bottom edge
+  vertices.push(interpolateWithVariation(bottomRight, bottomLeft, 0.3));
+  vertices.push(interpolateWithVariation(bottomRight, bottomLeft, 0.7));
+  vertices.push(bottomLeft);
+  
+  // Left edge
+  vertices.push(interpolateWithVariation(bottomLeft, topLeft, 0.3));
+  vertices.push(interpolateWithVariation(bottomLeft, topLeft, 0.7));
   
   return vertices;
+};
+
+const interpolateWithVariation = (p1: Point, p2: Point, t: number): Point => {
+  const baseX = p1.x + (p2.x - p1.x) * t;
+  const baseY = p1.y + (p2.y - p1.y) * t;
+  
+  // Add some perpendicular variation to make edges more organic
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  
+  if (length > 0) {
+    const perpX = -dy / length;
+    const perpY = dx / length;
+    const variation = (Math.random() - 0.5) * length * 0.1;
+    
+    return {
+      x: baseX + perpX * variation,
+      y: baseY + perpY * variation
+    };
+  }
+  
+  return { x: baseX, y: baseY };
 };
 
 
