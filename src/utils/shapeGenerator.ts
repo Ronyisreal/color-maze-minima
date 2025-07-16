@@ -250,84 +250,137 @@ const generateGeometricRegionsFromGraph = (
   const nodes = graphCalculator.getNodes();
   const regions: Region[] = [];
   const margin = 60;
-  const numNodes = nodes.length;
-  const cols = Math.ceil(Math.sqrt(numNodes * 1.2));
-  const rows = Math.ceil(numNodes / cols);
-
-  const cellWidth = (width - 2 * margin) / cols;
-  const cellHeight = (height - 2 * margin) / rows;
-
-  const seeds: Point[] = [];
-  for (let i = 0; i < numNodes; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    const baseX = margin + col * cellWidth + cellWidth / 2;
-    const baseY = margin + row * cellHeight + cellHeight / 2;
-    const jitterX = (Math.random() - 0.5) * cellWidth * 0.4;
-    const jitterY = (Math.random() - 0.5) * cellHeight * 0.4;
-    seeds.push({
-      x: baseX + jitterX,
-      y: baseY + jitterY
+  
+  // Create a more organic layout using recursive space division
+  const regionBounds = createMapRegions(nodes, width, height, margin);
+  
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const bounds = regionBounds[i];
+    
+    // Generate irregular polygon for this region
+    const vertices = generateIrregularPolygon(bounds, 6 + Math.floor(Math.random() * 4)); // 6-9 vertices
+    const center = calculateCentroid(vertices);
+    
+    regions.push({
+      id: node.id,
+      vertices,
+      center,
+      color: null,
+      adjacentRegions: Array.from(node.adjacents)
     });
   }
-
-  for (let i = 0; i < seeds.length; i++) {
-    const seed = seeds[i];
-    const vertices = createVoronoiCell(seed, seeds, width, height);
-
-    if (vertices.length >= 3) {
-      regions.push({
-        id: nodes[i].id,
-        vertices,
-        center: seed,
-        color: null,
-        adjacentRegions: []
-      });
-    }
-  }
-
+  
   return regions;
 };
 
-const createVoronoiCell = (seed: Point, allSeeds: Point[], width: number, height: number): Point[] => {
-  let clipVertices: Point[] = [
-    { x: 50, y: 50 },
-    { x: width - 50, y: 50 },
-    { x: width - 50, y: height - 50 },
-    { x: 50, y: height - 50 }
-  ];
-  for (const otherSeed of allSeeds) {
-    if (otherSeed === seed) continue;
-    clipVertices = clipByPerpBisector(clipVertices, seed, otherSeed);
-    if (clipVertices.length < 3) break;
-  }
-  return clipVertices;
+interface RegionBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const createMapRegions = (
+  nodes: any[],
+  width: number,
+  height: number,
+  margin: number
+): RegionBounds[] => {
+  const bounds: RegionBounds[] = [];
+  const workingWidth = width - 2 * margin;
+  const workingHeight = height - 2 * margin;
+  
+  // Use a recursive subdivision approach to create map-like regions
+  const areas = subdivideArea(
+    { x: margin, y: margin, width: workingWidth, height: workingHeight },
+    nodes.length,
+    0
+  );
+  
+  // Add some randomness to make regions more organic
+  return areas.map(area => ({
+    x: area.x + (Math.random() - 0.5) * area.width * 0.2,
+    y: area.y + (Math.random() - 0.5) * area.height * 0.2,
+    width: area.width * (0.8 + Math.random() * 0.4),
+    height: area.height * (0.8 + Math.random() * 0.4)
+  }));
 };
 
-const clipByPerpBisector = (vertices: Point[], seed1: Point, seed2: Point): Point[] => {
-  if (vertices.length === 0) return [];
-  const midX = (seed1.x + seed2.x) / 2;
-  const midY = (seed1.y + seed2.y) / 2;
-  const dx = seed2.x - seed1.x;
-  const dy = seed2.y - seed1.y;
-  const result: Point[] = [];
-  for (let i = 0; i < vertices.length; i++) {
-    const current = vertices[i];
-    const next = vertices[(i + 1) % vertices.length];
-    const currentSide = (current.x - midX) * dx + (current.y - midY) * dy;
-    const nextSide = (next.x - midX) * dx + (next.y - midY) * dy;
-    if (currentSide <= 0) {
-      result.push(current);
-    }
-    if ((currentSide > 0) !== (nextSide > 0)) {
-      const t = currentSide / (currentSide - nextSide);
-      const ix = current.x + t * (next.x - current.x);
-      const iy = current.y + t * (next.y - current.y);
-      result.push({ x: ix, y: iy });
-    }
+const subdivideArea = (
+  area: RegionBounds,
+  numRegions: number,
+  depth: number
+): RegionBounds[] => {
+  if (numRegions <= 1 || depth > 4) {
+    return [area];
   }
-  return result;
+  
+  const isHorizontalSplit = area.width > area.height;
+  const splitRatio = 0.4 + Math.random() * 0.2; // 40%-60% split
+  
+  if (isHorizontalSplit) {
+    const splitX = area.x + area.width * splitRatio;
+    const leftRegions = Math.floor(numRegions * splitRatio);
+    const rightRegions = numRegions - leftRegions;
+    
+    return [
+      ...subdivideArea(
+        { x: area.x, y: area.y, width: splitX - area.x, height: area.height },
+        leftRegions,
+        depth + 1
+      ),
+      ...subdivideArea(
+        { x: splitX, y: area.y, width: area.x + area.width - splitX, height: area.height },
+        rightRegions,
+        depth + 1
+      )
+    ];
+  } else {
+    const splitY = area.y + area.height * splitRatio;
+    const topRegions = Math.floor(numRegions * splitRatio);
+    const bottomRegions = numRegions - topRegions;
+    
+    return [
+      ...subdivideArea(
+        { x: area.x, y: area.y, width: area.width, height: splitY - area.y },
+        topRegions,
+        depth + 1
+      ),
+      ...subdivideArea(
+        { x: area.x, y: splitY, width: area.width, height: area.y + area.height - splitY },
+        bottomRegions,
+        depth + 1
+      )
+    ];
+  }
 };
+
+const generateIrregularPolygon = (bounds: RegionBounds, numVertices: number): Point[] => {
+  const vertices: Point[] = [];
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+  const radiusX = bounds.width * 0.4;
+  const radiusY = bounds.height * 0.4;
+  
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * 2 * Math.PI;
+    const radiusVariation = 0.6 + Math.random() * 0.8; // 60%-140% of base radius
+    const angleVariation = (Math.random() - 0.5) * 0.3; // ±15% angle variation
+    
+    const actualAngle = angle + angleVariation;
+    const x = centerX + Math.cos(actualAngle) * radiusX * radiusVariation;
+    const y = centerY + Math.sin(actualAngle) * radiusY * radiusVariation;
+    
+    vertices.push({
+      x: Math.max(bounds.x, Math.min(bounds.x + bounds.width, x)),
+      y: Math.max(bounds.y, Math.min(bounds.y + bounds.height, y))
+    });
+  }
+  
+  return vertices;
+};
+
 
 const updateGeometricAdjacencies = (regions: Region[]): void => {
   regions.forEach(region => {
