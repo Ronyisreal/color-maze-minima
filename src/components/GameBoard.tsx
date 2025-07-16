@@ -227,8 +227,8 @@ export const GameBoard: React.FC = () => {
       return;
     }
 
-    // Add 10 points for successfully coloring a region
-    setCurrentScore(prev => prev + 10);
+    // Add 1 point for successfully coloring a region
+    setCurrentScore(prev => prev + 1);
     setRegions(updatedRegions);
     checkGameCompletion(updatedRegions);
   };
