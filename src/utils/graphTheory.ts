@@ -31,41 +31,68 @@ export class GraphColoringCalculator {
     this.graph.nodes.get(node2)!.adjacents.add(node1);
   }
 
-  // Calculate chromatic number using Welsh-Powell algorithm
+  // Calculate chromatic number using backtracking algorithm
   calculateChromaticNumber(): number {
     const nodes = Array.from(this.graph.nodes.values());
     
     if (nodes.length === 0) return 0;
+    if (nodes.length === 1) return 1;
     
-    // Sort nodes by degree (number of adjacent nodes) in descending order
-    const sortedNodes = nodes.sort((a, b) => b.adjacents.size - a.adjacents.size);
+    // Try coloring with k colors, starting from 1
+    for (let k = 1; k <= nodes.length; k++) {
+      if (this.canColorWithKColors(nodes, k)) {
+        return k;
+      }
+    }
     
-    // Color assignment map
+    // Fallback (should never reach here for valid graphs)
+    return nodes.length;
+  }
+
+  // Check if graph can be colored with k colors using backtracking
+  private canColorWithKColors(nodes: GraphNode[], k: number): boolean {
     const coloring = new Map<string, number>();
-    let maxColor = 0;
+    return this.backtrackColor(nodes, 0, k, coloring);
+  }
 
-    for (const node of sortedNodes) {
-      // Find the smallest color that can be assigned to this node
-      const usedColors = new Set<number>();
-      
-      // Check colors of adjacent nodes
-      for (const adjacentId of node.adjacents) {
-        if (coloring.has(adjacentId)) {
-          usedColors.add(coloring.get(adjacentId)!);
-        }
-      }
-
-      // Find the smallest available color
-      let color = 1;
-      while (usedColors.has(color)) {
-        color++;
-      }
-
-      coloring.set(node.id, color);
-      maxColor = Math.max(maxColor, color);
+  // Backtracking function to try all possible colorings
+  private backtrackColor(nodes: GraphNode[], nodeIndex: number, k: number, coloring: Map<string, number>): boolean {
+    // Base case: all nodes are colored
+    if (nodeIndex === nodes.length) {
+      return true;
     }
 
-    return maxColor;
+    const currentNode = nodes[nodeIndex];
+    
+    // Try each color from 1 to k
+    for (let color = 1; color <= k; color++) {
+      if (this.isSafeToColor(currentNode, color, coloring)) {
+        // Assign color to current node
+        coloring.set(currentNode.id, color);
+        
+        // Recursively try to color remaining nodes
+        if (this.backtrackColor(nodes, nodeIndex + 1, k, coloring)) {
+          return true;
+        }
+        
+        // Backtrack: remove color assignment
+        coloring.delete(currentNode.id);
+      }
+    }
+    
+    // No valid coloring found
+    return false;
+  }
+
+  // Check if it's safe to assign a color to a node
+  private isSafeToColor(node: GraphNode, color: number, coloring: Map<string, number>): boolean {
+    // Check if any adjacent node has the same color
+    for (const adjacentId of node.adjacents) {
+      if (coloring.has(adjacentId) && coloring.get(adjacentId) === color) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Get the current graph structure
