@@ -75,7 +75,15 @@ export const GameBoard: React.FC = () => {
     const newRegions = generateLargeComplexShape(boardWidth, boardHeight, difficulty, level);
     console.log('Generated regions:', newRegions.length);
     
+    // Log all adjacencies for debugging
+    console.log('=== Region Adjacencies ===');
+    newRegions.forEach(region => {
+      console.log(`Region ${region.id}: adjacent to [${region.adjacentRegions.join(', ')}]`);
+    });
+    
     const minColors = calculateMinimumColorsBacktracking(newRegions);
+    console.log('Calculated minimum colors:', minColors);
+    
     const finalMinColors = minColors; // Use actual calculated chromatic number
     
     setMinimumColors(finalMinColors);
