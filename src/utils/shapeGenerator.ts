@@ -278,104 +278,150 @@ const createSeamlessConnectedMap = (
 ): { regions: { vertices: Point[]; center: Point }[] } => {
   const workingWidth = width - 2 * margin;
   const workingHeight = height - 2 * margin;
-  const numNodes = nodes.length;
   
-  // Create a network of connected control points
-  const controlPoints = generateControlPointNetwork(workingWidth, workingHeight, margin, numNodes);
+  // Start with the entire canvas area as one region
+  const initialRegion = {
+    vertices: [
+      { x: margin, y: margin },
+      { x: margin + workingWidth, y: margin },
+      { x: margin + workingWidth, y: margin + workingHeight },
+      { x: margin, y: margin + workingHeight }
+    ],
+    center: { x: margin + workingWidth / 2, y: margin + workingHeight / 2 }
+  };
   
-  // Generate organic boundaries between regions
-  const boundaries = generateOrganicBoundaries(controlPoints, nodes);
-  
-  // Create regions from the boundary network
-  const regions = createRegionsFromBoundaries(boundaries, controlPoints, nodes);
+  // Recursively divide the space into connected regions
+  const regions = divideSpaceRecursively([initialRegion], nodes.length, nodes);
   
   return { regions };
 };
 
-const generateControlPointNetwork = (
-  width: number,
-  height: number,
-  margin: number,
-  numNodes: number
-): Point[] => {
-  const points: Point[] = [];
-  
-  // Create a roughly circular/organic arrangement of control points
-  const centerX = margin + width / 2;
-  const centerY = margin + height / 2;
-  const baseRadius = Math.min(width, height) * 0.3;
-  
-  for (let i = 0; i < numNodes; i++) {
-    const angle = (i / numNodes) * 2 * Math.PI;
-    const radiusVariation = 0.7 + Math.random() * 0.6; // 70%-130% variation
-    const angleVariation = (Math.random() - 0.5) * 0.5; // Some angular variation
-    
-    const actualAngle = angle + angleVariation;
-    const actualRadius = baseRadius * radiusVariation;
-    
-    const x = centerX + Math.cos(actualAngle) * actualRadius;
-    const y = centerY + Math.sin(actualAngle) * actualRadius;
-    
-    points.push({ x, y });
+const divideSpaceRecursively = (
+  currentRegions: { vertices: Point[]; center: Point }[],
+  targetCount: number,
+  nodes: any[]
+): { vertices: Point[]; center: Point }[] => {
+  if (currentRegions.length >= targetCount) {
+    return currentRegions.slice(0, targetCount);
   }
   
-  return points;
-};
-
-const generateOrganicBoundaries = (
-  controlPoints: Point[],
-  nodes: any[]
-): Map<string, Point[]> => {
-  const boundaries = new Map<string, Point[]>();
+  // Find the largest region to split
+  let largestRegion = currentRegions[0];
+  let largestIndex = 0;
+  let largestArea = calculatePolygonArea(largestRegion.vertices);
   
-  // For each pair of adjacent nodes, create a curved boundary
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const nodePoint = controlPoints[i];
-    
-    for (const adjacentId of node.adjacents) {
-      const adjacentIndex = nodes.findIndex(n => n.id === adjacentId);
-      if (adjacentIndex !== -1 && adjacentIndex > i) { // Avoid duplicate boundaries
-        const adjacentPoint = controlPoints[adjacentIndex];
-        const boundaryKey = `${node.id}-${adjacentId}`;
-        
-        // Create a curved boundary line between the two points
-        const boundaryPoints = createCurvedBoundary(nodePoint, adjacentPoint);
-        boundaries.set(boundaryKey, boundaryPoints);
-      }
+  for (let i = 1; i < currentRegions.length; i++) {
+    const area = calculatePolygonArea(currentRegions[i].vertices);
+    if (area > largestArea) {
+      largestArea = area;
+      largestRegion = currentRegions[i];
+      largestIndex = i;
     }
   }
   
-  return boundaries;
+  // Split the largest region into two parts
+  const newRegions = splitRegion(largestRegion);
+  
+  // Replace the largest region with the two new regions
+  const updatedRegions = [
+    ...currentRegions.slice(0, largestIndex),
+    ...newRegions,
+    ...currentRegions.slice(largestIndex + 1)
+  ];
+  
+  // Continue recursively
+  return divideSpaceRecursively(updatedRegions, targetCount, nodes);
 };
 
-const createCurvedBoundary = (point1: Point, point2: Point): Point[] => {
+const calculatePolygonArea = (vertices: Point[]): number => {
+  let area = 0;
+  for (let i = 0; i < vertices.length; i++) {
+    const j = (i + 1) % vertices.length;
+    area += vertices[i].x * vertices[j].y;
+    area -= vertices[j].x * vertices[i].y;
+  }
+  return Math.abs(area) / 2;
+};
+
+const splitRegion = (region: { vertices: Point[]; center: Point }): { vertices: Point[]; center: Point }[] => {
+  const vertices = region.vertices;
+  const bounds = getBounds(vertices);
+  
+  // Decide whether to split horizontally or vertically
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxY - bounds.minY;
+  const splitVertically = width > height;
+  
+  // Create an organic dividing line
+  const divideAt = 0.3 + Math.random() * 0.4; // 30-70% along the dimension
+  const divisionLine = createOrganicDivisionLine(bounds, splitVertically, divideAt);
+  
+  // Split the polygon along the division line
+  const [region1, region2] = splitPolygonByLine(vertices, divisionLine, splitVertically);
+  
+  return [
+    {
+      vertices: region1,
+      center: calculateCentroid(region1)
+    },
+    {
+      vertices: region2,
+      center: calculateCentroid(region2)
+    }
+  ];
+};
+
+const getBounds = (vertices: Point[]): { minX: number; maxX: number; minY: number; maxY: number } => {
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  
+  for (const vertex of vertices) {
+    minX = Math.min(minX, vertex.x);
+    maxX = Math.max(maxX, vertex.x);
+    minY = Math.min(minY, vertex.y);
+    maxY = Math.max(maxY, vertex.y);
+  }
+  
+  return { minX, maxX, minY, maxY };
+};
+
+const createOrganicDivisionLine = (
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  splitVertically: boolean,
+  divideAt: number
+): Point[] => {
   const points: Point[] = [];
-  const numSegments = 8;
+  const numPoints = 8;
   
-  // Create a curved path between the two points
-  const midX = (point1.x + point2.x) / 2;
-  const midY = (point1.y + point2.y) / 2;
-  
-  // Add some perpendicular offset to create curves
-  const dx = point2.x - point1.x;
-  const dy = point2.y - point1.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  
-  if (length > 0) {
-    const perpX = -dy / length;
-    const perpY = dx / length;
-    const maxOffset = length * 0.3 * (Math.random() - 0.5);
+  if (splitVertically) {
+    // Vertical split - line goes from top to bottom
+    const baseX = bounds.minX + (bounds.maxX - bounds.minX) * divideAt;
+    const height = bounds.maxY - bounds.minY;
     
-    for (let i = 0; i <= numSegments; i++) {
-      const t = i / numSegments;
-      const baseX = point1.x + (point2.x - point1.x) * t;
-      const baseY = point1.y + (point2.y - point1.y) * t;
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      const y = bounds.minY + height * t;
       
-      // Apply curved offset (stronger in the middle)
-      const offsetStrength = Math.sin(t * Math.PI) * maxOffset;
-      const x = baseX + perpX * offsetStrength;
-      const y = baseY + perpY * offsetStrength;
+      // Add organic variation to the line
+      const maxVariation = (bounds.maxX - bounds.minX) * 0.1;
+      const variation = Math.sin(t * Math.PI * 2) * maxVariation * (Math.random() - 0.5);
+      const x = baseX + variation;
+      
+      points.push({ x, y });
+    }
+  } else {
+    // Horizontal split - line goes from left to right
+    const baseY = bounds.minY + (bounds.maxY - bounds.minY) * divideAt;
+    const width = bounds.maxX - bounds.minX;
+    
+    for (let i = 0; i <= numPoints; i++) {
+      const t = i / numPoints;
+      const x = bounds.minX + width * t;
+      
+      // Add organic variation to the line
+      const maxVariation = (bounds.maxY - bounds.minY) * 0.1;
+      const variation = Math.sin(t * Math.PI * 2) * maxVariation * (Math.random() - 0.5);
+      const y = baseY + variation;
       
       points.push({ x, y });
     }
@@ -384,91 +430,50 @@ const createCurvedBoundary = (point1: Point, point2: Point): Point[] => {
   return points;
 };
 
-const createRegionsFromBoundaries = (
-  boundaries: Map<string, Point[]>,
-  controlPoints: Point[],
-  nodes: any[]
-): { vertices: Point[]; center: Point }[] => {
-  const regions: { vertices: Point[]; center: Point }[] = [];
+const splitPolygonByLine = (
+  vertices: Point[],
+  divisionLine: Point[],
+  splitVertically: boolean
+): [Point[], Point[]] => {
+  const bounds = getBounds(vertices);
   
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const centerPoint = controlPoints[i];
+  // Create two polygons by combining the original edges with the division line
+  const region1: Point[] = [];
+  const region2: Point[] = [];
+  
+  if (splitVertically) {
+    // Split vertically - left and right regions
+    // Create left region
+    region1.push({ x: bounds.minX, y: bounds.minY });
+    region1.push({ x: divisionLine[0].x, y: bounds.minY });
+    region1.push(...divisionLine);
+    region1.push({ x: divisionLine[divisionLine.length - 1].x, y: bounds.maxY });
+    region1.push({ x: bounds.minX, y: bounds.maxY });
     
-    // Create a region by expanding outward from the center
-    const vertices = createOrganicRegionShape(centerPoint, node.adjacents, controlPoints, nodes, boundaries);
+    // Create right region
+    region2.push({ x: divisionLine[0].x, y: bounds.minY });
+    region2.push({ x: bounds.maxX, y: bounds.minY });
+    region2.push({ x: bounds.maxX, y: bounds.maxY });
+    region2.push({ x: divisionLine[divisionLine.length - 1].x, y: bounds.maxY });
+    region2.push(...divisionLine.slice().reverse());
+  } else {
+    // Split horizontally - top and bottom regions
+    // Create top region
+    region1.push({ x: bounds.minX, y: bounds.minY });
+    region1.push({ x: bounds.maxX, y: bounds.minY });
+    region1.push({ x: bounds.maxX, y: divisionLine[divisionLine.length - 1].y });
+    region1.push(...divisionLine.slice().reverse());
+    region1.push({ x: bounds.minX, y: divisionLine[0].y });
     
-    regions.push({
-      vertices,
-      center: centerPoint
-    });
+    // Create bottom region
+    region2.push({ x: bounds.minX, y: divisionLine[0].y });
+    region2.push(...divisionLine);
+    region2.push({ x: bounds.maxX, y: divisionLine[divisionLine.length - 1].y });
+    region2.push({ x: bounds.maxX, y: bounds.maxY });
+    region2.push({ x: bounds.minX, y: bounds.maxY });
   }
   
-  return regions;
-};
-
-const createOrganicRegionShape = (
-  centerPoint: Point,
-  adjacentIds: Set<string>,
-  controlPoints: Point[],
-  nodes: any[],
-  boundaries: Map<string, Point[]>
-): Point[] => {
-  const vertices: Point[] = [];
-  const radius = 40 + Math.random() * 30; // 40-70 pixel radius
-  const numBaseVertices = 8 + Math.floor(Math.random() * 4); // 8-11 vertices
-  
-  // Create organic shape around the center point
-  for (let i = 0; i < numBaseVertices; i++) {
-    const angle = (i / numBaseVertices) * 2 * Math.PI;
-    const radiusVariation = 0.6 + Math.random() * 0.8; // 60%-140% variation
-    const angleVariation = (Math.random() - 0.5) * 0.3; // ±15% angle variation
-    
-    const actualAngle = angle + angleVariation;
-    const actualRadius = radius * radiusVariation;
-    
-    const x = centerPoint.x + Math.cos(actualAngle) * actualRadius;
-    const y = centerPoint.y + Math.sin(actualAngle) * actualRadius;
-    
-    vertices.push({ x, y });
-  }
-  
-  // Add some additional random points for more organic feel
-  for (let i = 0; i < 3; i++) {
-    const angle = Math.random() * 2 * Math.PI;
-    const r = radius * (0.5 + Math.random() * 0.5);
-    const x = centerPoint.x + Math.cos(angle) * r;
-    const y = centerPoint.y + Math.sin(angle) * r;
-    vertices.push({ x, y });
-  }
-  
-  // Sort vertices by angle to create proper polygon
-  vertices.sort((a, b) => {
-    const angleA = Math.atan2(a.y - centerPoint.y, a.x - centerPoint.x);
-    const angleB = Math.atan2(b.y - centerPoint.y, b.x - centerPoint.x);
-    return angleA - angleB;
-  });
-  
-  // Smooth the shape by applying curve smoothing
-  return smoothPolygon(vertices);
-};
-
-const smoothPolygon = (vertices: Point[]): Point[] => {
-  const smoothed: Point[] = [];
-  const smoothingFactor = 0.3;
-  
-  for (let i = 0; i < vertices.length; i++) {
-    const prev = vertices[(i - 1 + vertices.length) % vertices.length];
-    const curr = vertices[i];
-    const next = vertices[(i + 1) % vertices.length];
-    
-    const smoothedX = curr.x + smoothingFactor * ((prev.x + next.x) / 2 - curr.x);
-    const smoothedY = curr.y + smoothingFactor * ((prev.y + next.y) / 2 - curr.y);
-    
-    smoothed.push({ x: smoothedX, y: smoothedY });
-  }
-  
-  return smoothed;
+  return [region1, region2];
 };
 
 
