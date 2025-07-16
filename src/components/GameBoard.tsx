@@ -32,6 +32,7 @@ const getTimeLimit = (difficulty: Difficulty): number => {
 export const GameBoard: React.FC = () => {
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [colorsUsed, setColorsUsed] = useState(0);
   const [minimumColors, setMinimumColors] = useState(0);
@@ -438,15 +439,18 @@ export const GameBoard: React.FC = () => {
                   
                   {regions.map(region => {
                     const points = region.vertices.map(v => `${v.x},${v.y}`).join(' ');
+                    const isHovered = hoveredRegion === region.id;
                     return (
                       <g key={region.id}>
                         <polygon
                           points={points}
                           fill={region.color || '#f3f4f6'}
-                          stroke={region.color ? '#374151' : '#1f2937'}
-                          strokeWidth="2"
-                          className={`cursor-pointer hover:stroke-gray-800 transition-all duration-200 ${gameEnded ? 'pointer-events-none' : ''}`}
+                          stroke={isHovered ? '#000000' : (region.color ? '#374151' : '#1f2937')}
+                          strokeWidth={isHovered ? '6' : '2'}
+                          className={`cursor-pointer transition-all duration-200 ${gameEnded ? 'pointer-events-none' : ''}`}
                           onClick={() => handleRegionColor(region.id)}
+                          onMouseEnter={() => setHoveredRegion(region.id)}
+                          onMouseLeave={() => setHoveredRegion(null)}
                         />
                         <text
                           x={region.center.x}

@@ -211,102 +211,162 @@ const generateGeometricRegionsFromGraph = (
   const nodes = graphCalculator.getNodes();
   const regions: Region[] = [];
   const margin = 60;
-  const numNodes = nodes.length;
-
-  // Create organic blob-like shapes
-  const centers: Point[] = [];
   const usedWidth = width - 2 * margin;
   const usedHeight = height - 2 * margin;
 
-  // Generate centers with organic spacing
-  for (let i = 0; i < numNodes; i++) {
-    let center: Point;
-    let attempts = 0;
-    do {
-      center = {
-        x: margin + Math.random() * usedWidth,
-        y: margin + Math.random() * usedHeight
-      };
-      attempts++;
-    } while (attempts < 50 && centers.some(c => distance(c, center) < Math.min(usedWidth, usedHeight) / (numNodes * 0.3)));
+  // Start with a single large shape and recursively divide it
+  const baseShape = createBaseShape(margin, usedWidth, usedHeight);
+  const dividedRegions = recursivelyDivideShape(baseShape, nodes.length, nodes, width, height);
+
+  return dividedRegions;
+};
+
+const createBaseShape = (margin: number, width: number, height: number): Point[] => {
+  const vertices: Point[] = [];
+  const centerX = margin + width / 2;
+  const centerY = margin + height / 2;
+  const numVertices = 16;
+  
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * 2 * Math.PI;
+    const radiusX = (width / 2) * 0.8;
+    const radiusY = (height / 2) * 0.8;
     
-    centers.push(center);
+    // Add organic variation
+    const noise = Math.sin(angle * 3) * 0.1 + Math.sin(angle * 5) * 0.05;
+    const radius = (1 + noise) * Math.min(radiusX, radiusY);
+    
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+    
+    vertices.push({ x, y });
+  }
+  
+  return vertices;
+};
+
+const recursivelyDivideShape = (
+  shape: Point[], 
+  numRegions: number, 
+  nodes: { id: string }[], 
+  width: number, 
+  height: number
+): Region[] => {
+  if (numRegions === 1) {
+    return [{
+      id: nodes[0].id,
+      vertices: shape,
+      center: calculateCentroid(shape),
+      color: null,
+      adjacentRegions: []
+    }];
   }
 
-  // Create organic shapes for each center
-  for (let i = 0; i < centers.length; i++) {
-    const center = centers[i];
-    const vertices = createOrganicShape(center, width, height, i, numNodes);
-    
-    if (vertices.length >= 3) {
-      regions.push({
-        id: nodes[i].id,
-        vertices,
-        center,
-        color: null,
-        adjacentRegions: []
-      });
-    }
+  const regions: Region[] = [];
+  const center = calculateCentroid(shape);
+  
+  // Create connected regions by dividing the shape into wedges
+  for (let i = 0; i < Math.min(numRegions, nodes.length); i++) {
+    const subShape = createConnectedSubShape(shape, i, numRegions, center);
+    regions.push({
+      id: nodes[i].id,
+      vertices: subShape,
+      center: calculateCentroid(subShape),
+      color: null,
+      adjacentRegions: []
+    });
   }
 
   return regions;
 };
 
-const createOrganicShape = (center: Point, width: number, height: number, index: number, totalShapes: number): Point[] => {
+const createConnectedSubShape = (
+  baseShape: Point[], 
+  regionIndex: number, 
+  totalRegions: number, 
+  center: Point
+): Point[] => {
   const vertices: Point[] = [];
-  const baseRadius = Math.min(width, height) / (totalShapes * 0.6);
-  const numVertices = 8 + Math.floor(Math.random() * 6); // 8-14 vertices for organic shape
   
-  // Create organic blob using noise and randomness
-  for (let i = 0; i < numVertices; i++) {
-    const angle = (i / numVertices) * 2 * Math.PI;
+  // Create wedge-like divisions that share boundaries
+  const anglePerRegion = (2 * Math.PI) / totalRegions;
+  const startAngle = regionIndex * anglePerRegion;
+  const endAngle = (regionIndex + 1) * anglePerRegion;
+  
+  // Add center point
+  vertices.push(center);
+  
+  // Add boundary points along the perimeter
+  const perimeterPoints = [];
+  for (let i = 0; i < baseShape.length; i++) {
+    const point = baseShape[i];
+    const angle = Math.atan2(point.y - center.y, point.x - center.x);
+    const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
     
-    // Add multiple noise layers for organic variation
-    const noise1 = Math.sin(angle * 2 + index) * 0.4;
-    const noise2 = Math.sin(angle * 3 + index * 1.3) * 0.3;
-    const noise3 = Math.sin(angle * 5 + index * 2.1) * 0.2;
-    const randomNoise = (Math.random() - 0.5) * 0.6;
-    
-    const radiusVariation = 1 + noise1 + noise2 + noise3 + randomNoise;
-    const radius = baseRadius * Math.max(0.3, radiusVariation);
-    
-    // Add angular variation for more organic shapes
-    const angleVariation = (Math.random() - 0.5) * 0.4;
-    const adjustedAngle = angle + angleVariation;
-    
-    const x = center.x + Math.cos(adjustedAngle) * radius;
-    const y = center.y + Math.sin(adjustedAngle) * radius;
-    
-    // Keep within bounds with some margin
-    const margin = 60;
-    const clampedX = Math.max(margin, Math.min(width - margin, x));
-    const clampedY = Math.max(margin, Math.min(height - margin, y));
-    
-    vertices.push({ x: clampedX, y: clampedY });
+    // Check if point is within this region's angle range
+    if (normalizedAngle >= startAngle && normalizedAngle <= endAngle) {
+      perimeterPoints.push(point);
+    }
   }
   
-  // Apply smoothing to make shapes more organic
-  const smoothed = smoothOrganicShape(vertices);
-  return smoothed;
+  // Add start and end boundary lines
+  const startBoundaryPoint = createBoundaryPoint(baseShape, startAngle, center);
+  const endBoundaryPoint = createBoundaryPoint(baseShape, endAngle, center);
+  
+  // Assemble the shape
+  vertices.push(startBoundaryPoint);
+  vertices.push(...perimeterPoints);
+  vertices.push(endBoundaryPoint);
+  
+  return vertices.length >= 3 ? vertices : createFallbackShape(center, regionIndex, totalRegions);
 };
 
-const smoothOrganicShape = (vertices: Point[]): Point[] => {
-  const smoothed: Point[] = [];
-  const numVertices = vertices.length;
+const createBoundaryPoint = (baseShape: Point[], angle: number, center: Point): Point => {
+  const direction = { x: Math.cos(angle), y: Math.sin(angle) };
   
-  for (let i = 0; i < numVertices; i++) {
-    const prev = vertices[(i - 1 + numVertices) % numVertices];
-    const curr = vertices[i];
-    const next = vertices[(i + 1) % numVertices];
+  // Find intersection with base shape perimeter
+  let maxDistance = 0;
+  let boundaryPoint = center;
+  
+  for (const point of baseShape) {
+    const distance = Math.sqrt((point.x - center.x) ** 2 + (point.y - center.y) ** 2);
+    const pointAngle = Math.atan2(point.y - center.y, point.x - center.x);
+    const angleDiff = Math.abs(pointAngle - angle);
     
-    // Simple smoothing using weighted average
-    const smoothX = 0.1 * prev.x + 0.8 * curr.x + 0.1 * next.x;
-    const smoothY = 0.1 * prev.y + 0.8 * curr.y + 0.1 * next.y;
-    
-    smoothed.push({ x: smoothX, y: smoothY });
+    if (angleDiff < 0.1 && distance > maxDistance) {
+      maxDistance = distance;
+      boundaryPoint = point;
+    }
   }
   
-  return smoothed;
+  // If no close point found, create one
+  if (maxDistance === 0) {
+    const avgRadius = baseShape.reduce((sum, p) => sum + Math.sqrt((p.x - center.x) ** 2 + (p.y - center.y) ** 2), 0) / baseShape.length;
+    boundaryPoint = {
+      x: center.x + direction.x * avgRadius,
+      y: center.y + direction.y * avgRadius
+    };
+  }
+  
+  return boundaryPoint;
+};
+
+const createFallbackShape = (center: Point, regionIndex: number, totalRegions: number): Point[] => {
+  const vertices: Point[] = [];
+  const baseRadius = 80;
+  const numVertices = 6;
+  
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * 2 * Math.PI + (regionIndex * Math.PI / totalRegions);
+    const radius = baseRadius * (0.8 + Math.random() * 0.4);
+    
+    vertices.push({
+      x: center.x + Math.cos(angle) * radius,
+      y: center.y + Math.sin(angle) * radius
+    });
+  }
+  
+  return vertices;
 };
 
 const updateGeometricAdjacencies = (regions: Region[]): void => {
