@@ -168,7 +168,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
             <div>
               <strong className="text-blue-800 dark:text-blue-200">Scoring:</strong>
               <ul className="mt-1 space-y-0.5 text-blue-700 dark:text-blue-300">
-                <li>• +1 point per colored region</li>
+                <li>• +10 points per colored region</li>
                 <li>• More levels = more pieces to color</li>
                 <li>• Full marks for using minimum colors</li>
               </ul>

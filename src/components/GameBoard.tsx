@@ -358,7 +358,7 @@ export const GameBoard: React.FC = () => {
           <div className="flex justify-center items-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-1">
               <span className="text-lg font-semibold text-emerald-400">Current Score: {currentScore}</span>
-              <span className="text-lg font-semibold text-violet-400">Total Score: {totalScore}</span>
+              <span className="text-lg font-semibold text-violet-400">Total Score: {totalScore + currentScore}</span>
             </div>
             <div className="flex items-center gap-2">
               <Timer className="w-5 h-5 text-cyan-400" />
