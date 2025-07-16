@@ -27,15 +27,6 @@ export const GameStats: React.FC<GameStatsProps> = ({
 }) => {
   const [showAnimation, setShowAnimation] = useState(true);
 
-  useEffect(() => {
-    // Stop animation after 5 minutes (300,000 milliseconds)
-    const timer = setTimeout(() => {
-      setShowAnimation(false);
-    }, 300000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   const getEfficiencyScore = () => {
     if (!gameCompleted) return null;
     if (colorsUsed === minimumColors) return 'Perfect!';
@@ -177,7 +168,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
             <div>
               <strong className="text-blue-800 dark:text-blue-200">Scoring:</strong>
               <ul className="mt-1 space-y-0.5 text-blue-700 dark:text-blue-300">
-                <li>• +10 points per colored region</li>
+                <li>• +1 point per colored region</li>
                 <li>• More levels = more pieces to color</li>
                 <li>• Full marks for using minimum colors</li>
               </ul>
