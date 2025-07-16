@@ -270,6 +270,46 @@ const generateGeometricRegionsFromGraph = (
   return regions;
 };
 
+const createOrganicPerimeter = (margin: number, width: number, height: number): Point[] => {
+  const points: Point[] = [];
+  const numPoints = 24; // More points for smoother curves
+  
+  // Create organic perimeter by going around the rectangle with curves
+  for (let i = 0; i < numPoints; i++) {
+    const t = i / numPoints;
+    const angle = t * 2 * Math.PI;
+    
+    // Create a roughly rectangular shape with organic variations
+    let x: number, y: number;
+    
+    if (t < 0.25) {
+      // Top edge
+      const edgeT = t / 0.25;
+      x = margin + width * edgeT;
+      y = margin + Math.sin(edgeT * Math.PI * 3) * (height * 0.05) + Math.random() * 10 - 5;
+    } else if (t < 0.5) {
+      // Right edge
+      const edgeT = (t - 0.25) / 0.25;
+      x = margin + width + Math.sin(edgeT * Math.PI * 3) * (width * 0.05) + Math.random() * 10 - 5;
+      y = margin + height * edgeT;
+    } else if (t < 0.75) {
+      // Bottom edge
+      const edgeT = (t - 0.5) / 0.25;
+      x = margin + width * (1 - edgeT);
+      y = margin + height + Math.sin(edgeT * Math.PI * 3) * (height * 0.05) + Math.random() * 10 - 5;
+    } else {
+      // Left edge
+      const edgeT = (t - 0.75) / 0.25;
+      x = margin + Math.sin(edgeT * Math.PI * 3) * (width * 0.05) + Math.random() * 10 - 5;
+      y = margin + height * (1 - edgeT);
+    }
+    
+    points.push({ x, y });
+  }
+  
+  return points;
+};
+
 const createSeamlessConnectedMap = (
   nodes: any[],
   width: number,
@@ -279,14 +319,9 @@ const createSeamlessConnectedMap = (
   const workingWidth = width - 2 * margin;
   const workingHeight = height - 2 * margin;
   
-  // Start with the entire canvas area as one region
+  // Start with an organic perimeter instead of a rectangle
   const initialRegion = {
-    vertices: [
-      { x: margin, y: margin },
-      { x: margin + workingWidth, y: margin },
-      { x: margin + workingWidth, y: margin + workingHeight },
-      { x: margin, y: margin + workingHeight }
-    ],
+    vertices: createOrganicPerimeter(margin, workingWidth, workingHeight),
     center: { x: margin + workingWidth / 2, y: margin + workingHeight / 2 }
   };
   
@@ -443,37 +478,158 @@ const splitPolygonByLine = (
   
   if (splitVertically) {
     // Split vertically - left and right regions
-    // Create left region
-    region1.push({ x: bounds.minX, y: bounds.minY });
-    region1.push({ x: divisionLine[0].x, y: bounds.minY });
-    region1.push(...divisionLine);
-    region1.push({ x: divisionLine[divisionLine.length - 1].x, y: bounds.maxY });
-    region1.push({ x: bounds.minX, y: bounds.maxY });
+    // Create left region with organic connections
+    const leftTopConnection = createOrganicConnection(
+      { x: bounds.minX, y: bounds.minY },
+      divisionLine[0],
+      bounds
+    );
+    const leftBottomConnection = createOrganicConnection(
+      divisionLine[divisionLine.length - 1],
+      { x: bounds.minX, y: bounds.maxY },
+      bounds
+    );
     
-    // Create right region
-    region2.push({ x: divisionLine[0].x, y: bounds.minY });
-    region2.push({ x: bounds.maxX, y: bounds.minY });
-    region2.push({ x: bounds.maxX, y: bounds.maxY });
-    region2.push({ x: divisionLine[divisionLine.length - 1].x, y: bounds.maxY });
-    region2.push(...divisionLine.slice().reverse());
+    region1.push(...createOrganicEdge(bounds.minX, bounds.minY, bounds.minX, bounds.maxY, false)); // Left edge
+    region1.push(...leftBottomConnection);
+    region1.push(...divisionLine.slice().reverse());
+    region1.push(...leftTopConnection);
+    
+    // Create right region with organic connections
+    const rightTopConnection = createOrganicConnection(
+      divisionLine[0],
+      { x: bounds.maxX, y: bounds.minY },
+      bounds
+    );
+    const rightBottomConnection = createOrganicConnection(
+      { x: bounds.maxX, y: bounds.maxY },
+      divisionLine[divisionLine.length - 1],
+      bounds
+    );
+    
+    region2.push(...rightTopConnection);
+    region2.push(...createOrganicEdge(bounds.maxX, bounds.minY, bounds.maxX, bounds.maxY, false)); // Right edge
+    region2.push(...rightBottomConnection);
+    region2.push(...divisionLine);
   } else {
     // Split horizontally - top and bottom regions
-    // Create top region
-    region1.push({ x: bounds.minX, y: bounds.minY });
-    region1.push({ x: bounds.maxX, y: bounds.minY });
-    region1.push({ x: bounds.maxX, y: divisionLine[divisionLine.length - 1].y });
-    region1.push(...divisionLine.slice().reverse());
-    region1.push({ x: bounds.minX, y: divisionLine[0].y });
+    // Create top region with organic connections
+    const topLeftConnection = createOrganicConnection(
+      { x: bounds.minX, y: bounds.minY },
+      { x: bounds.maxX, y: bounds.minY },
+      bounds
+    );
+    const topRightConnection = createOrganicConnection(
+      { x: bounds.maxX, y: bounds.minY },
+      divisionLine[divisionLine.length - 1],
+      bounds
+    );
+    const topMiddleConnection = createOrganicConnection(
+      divisionLine[0],
+      { x: bounds.minX, y: bounds.minY },
+      bounds
+    );
     
-    // Create bottom region
-    region2.push({ x: bounds.minX, y: divisionLine[0].y });
+    region1.push(...topLeftConnection);
+    region1.push(...topRightConnection);
+    region1.push(...createOrganicEdge(bounds.maxX, bounds.minY, bounds.maxX, divisionLine[divisionLine.length - 1].y, false));
+    region1.push(...divisionLine.slice().reverse());
+    region1.push(...createOrganicEdge(bounds.minX, divisionLine[0].y, bounds.minX, bounds.minY, false));
+    
+    // Create bottom region with organic connections
+    const bottomLeftConnection = createOrganicConnection(
+      { x: bounds.minX, y: bounds.maxY },
+      divisionLine[0],
+      bounds
+    );
+    const bottomRightConnection = createOrganicConnection(
+      divisionLine[divisionLine.length - 1],
+      { x: bounds.maxX, y: bounds.maxY },
+      bounds
+    );
+    
+    region2.push(...bottomLeftConnection);
     region2.push(...divisionLine);
-    region2.push({ x: bounds.maxX, y: divisionLine[divisionLine.length - 1].y });
-    region2.push({ x: bounds.maxX, y: bounds.maxY });
-    region2.push({ x: bounds.minX, y: bounds.maxY });
+    region2.push(...bottomRightConnection);
+    region2.push(...createOrganicEdge(bounds.maxX, bounds.maxY, bounds.minX, bounds.maxY, true)); // Bottom edge
+    region2.push(...createOrganicEdge(bounds.minX, bounds.maxY, bounds.minX, divisionLine[0].y, false)); // Left edge partial
   }
   
   return [region1, region2];
+};
+
+const createOrganicConnection = (
+  start: Point,
+  end: Point,
+  bounds: { minX: number; maxX: number; minY: number; maxY: number }
+): Point[] => {
+  const points: Point[] = [];
+  const distance = Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2);
+  const numPoints = Math.max(3, Math.floor(distance / 30));
+  
+  for (let i = 0; i <= numPoints; i++) {
+    const t = i / numPoints;
+    const baseX = start.x + (end.x - start.x) * t;
+    const baseY = start.y + (end.y - start.y) * t;
+    
+    // Add organic variation
+    const maxVariation = Math.min(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) * 0.02;
+    const variation = Math.sin(t * Math.PI * 2) * maxVariation * (Math.random() - 0.5);
+    
+    // Apply variation perpendicular to the line
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    if (length > 0) {
+      const perpX = -dy / length;
+      const perpY = dx / length;
+      
+      const x = baseX + perpX * variation;
+      const y = baseY + perpY * variation;
+      
+      points.push({ x, y });
+    } else {
+      points.push({ x: baseX, y: baseY });
+    }
+  }
+  
+  return points;
+};
+
+const createOrganicEdge = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  isHorizontal: boolean
+): Point[] => {
+  const points: Point[] = [];
+  const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  const numPoints = Math.max(4, Math.floor(length / 40));
+  
+  for (let i = 0; i <= numPoints; i++) {
+    const t = i / numPoints;
+    const baseX = x1 + (x2 - x1) * t;
+    const baseY = y1 + (y2 - y1) * t;
+    
+    // Add organic variation
+    const maxVariation = length * 0.02;
+    const variation = Math.sin(t * Math.PI * 3) * maxVariation * (Math.random() - 0.5);
+    
+    let x = baseX;
+    let y = baseY;
+    
+    if (isHorizontal) {
+      y += variation;
+    } else {
+      x += variation;
+    }
+    
+    points.push({ x, y });
+  }
+  
+  return points;
 };
 
 
