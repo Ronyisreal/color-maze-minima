@@ -70,7 +70,7 @@ const Leaderboard: React.FC = () => {
           <h1 className="doodle-header text-6xl md:text-8xl font-bold text-white mb-4">
             Leaderboard
           </h1>
-          <p className="text-xl text-white">
+          <p className="text-xl text-white bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent font-bold px-6 py-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg">
             Champions who conquered all difficulty modes
           </p>
         </div>
