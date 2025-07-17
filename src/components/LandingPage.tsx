@@ -75,7 +75,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
                   value={inputUsername}
                   onChange={(e) => setInputUsername(e.target.value)}
                   onFocus={() => setPlaceholderVisible(false)}
-                  className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-center placeholder:text-gray-500"
+                  className="px-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-center placeholder:text-gray-500"
                   onKeyPress={(e) => e.key === 'Enter' && inputUsername.trim() && handleSubmit()}
                 />
               </div>
