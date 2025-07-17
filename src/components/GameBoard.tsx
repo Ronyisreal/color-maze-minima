@@ -4,6 +4,7 @@ import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
 import { GameStats } from './GameStats';
 import { DifficultySelector, Difficulty } from './DifficultySelector';
+import { CongratulationsScreen } from './CongratulationsScreen';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { RefreshCw, Lightbulb, Trophy, Timer, Frown, User } from 'lucide-react';
@@ -31,7 +32,7 @@ const getTimeLimit = (difficulty: Difficulty): number => {
 };
 
 export const GameBoard: React.FC = () => {
-  const { username } = useUser();
+  const { username, gameProgress, updateModeCompletion } = useUser();
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
@@ -47,6 +48,8 @@ export const GameBoard: React.FC = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
   const [availableColors, setAvailableColors] = useState(AVAILABLE_COLORS.slice(0, 3));
+  const [modeStartTime, setModeStartTime] = useState<number>(0);
+  const [showCongratulations, setShowCongratulations] = useState(false);
 
   useEffect(() => {
     if (gameStarted && !gameCompleted && !gameEnded && timeLeft > 0) {
@@ -305,10 +308,29 @@ export const GameBoard: React.FC = () => {
       setLevel(level + 1);
       resetGame();
     } else {
+      // Mode completed - calculate total time spent on this mode
+      const timeLimit = getTimeLimit(difficulty);
+      const currentTime = Date.now();
+      const totalModeTimeMs = currentTime - modeStartTime;
+      const totalModeTime = Math.floor(totalModeTimeMs / 1000); // Convert to seconds
+      
+      // Update completion in context
+      updateModeCompletion(difficulty, totalModeTime);
+      
       toast({
-        title: "Difficulty Completed! 🎊",
-        description: `You've completed all levels in ${difficulty} mode! Try a harder difficulty for more challenge.`,
+        title: "Mode Completed! 🎊",
+        description: `${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} mode completed in ${formatTime(totalModeTime)}! Great job!`,
+        duration: 5000,
       });
+
+      // Check if all modes are completed after state update
+      setTimeout(() => {
+        // This will trigger after the context state is updated
+        if (gameProgress.allModesCompleted || 
+            (gameProgress.easy.completed && gameProgress.medium.completed && gameProgress.hard.completed)) {
+          setShowCongratulations(true);
+        }
+      }, 100);
     }
   };
 
@@ -334,6 +356,7 @@ export const GameBoard: React.FC = () => {
     setGameStarted(false);
     setScore(null);
     setTimeLeft(getTimeLimit(newDifficulty));
+    setModeStartTime(Date.now());
     
     // Use setTimeout to ensure state updates are processed
     setTimeout(() => {
@@ -350,8 +373,26 @@ export const GameBoard: React.FC = () => {
 
   useEffect(() => {
     setCurrentScore(0);
+    setModeStartTime(Date.now());
     generateNewPuzzle(difficulty, level);
   }, []);
+
+  // Check for all modes completion
+  useEffect(() => {
+    if (gameProgress.allModesCompleted && !showCongratulations) {
+      setTimeout(() => setShowCongratulations(true), 1000);
+    }
+  }, [gameProgress.allModesCompleted]);
+
+  // Show congratulations screen if all modes completed
+  if (showCongratulations) {
+    return (
+      <CongratulationsScreen
+        totalTime={gameProgress.overallTotalTime}
+        onClose={() => setShowCongratulations(false)}
+      />
+    );
+  }
 
   // Don't render game if no username is set
   if (!username) {
@@ -382,6 +423,22 @@ export const GameBoard: React.FC = () => {
             <div className="flex flex-col items-center gap-1">
               <span className="text-lg font-semibold text-emerald-400">Current Score: {currentScore}</span>
               <span className="text-lg font-semibold text-violet-400">Total Score: {regions.length * 10}</span>
+            </div>
+            
+            {/* Mode Progress Display */}
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-sm text-white/80">Mode Progress:</span>
+              <div className="flex gap-2">
+                <span className={`px-2 py-1 rounded text-xs ${gameProgress.easy.completed ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                  Easy {gameProgress.easy.completed ? `✓ ${formatTime(gameProgress.easy.totalTime)}` : '○'}
+                </span>
+                <span className={`px-2 py-1 rounded text-xs ${gameProgress.medium.completed ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                  Medium {gameProgress.medium.completed ? `✓ ${formatTime(gameProgress.medium.totalTime)}` : '○'}
+                </span>
+                <span className={`px-2 py-1 rounded text-xs ${gameProgress.hard.completed ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}`}>
+                  Hard {gameProgress.hard.completed ? `✓ ${formatTime(gameProgress.hard.totalTime)}` : '○'}
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Timer className="w-5 h-5 text-cyan-400" />

@@ -13,16 +13,16 @@ interface LeaderboardEntry {
 
 // Mock data - replace with actual data source
 const mockLeaderboardData: LeaderboardEntry[] = [
-  { id: '1', username: 'SpeedMaster', completionTime: '2:34', rank: 1 },
-  { id: '2', username: 'ColorWiz', completionTime: '2:47', rank: 2 },
-  { id: '3', username: 'PuzzlePro', completionTime: '3:12', rank: 3 },
-  { id: '4', username: 'GameChamp', completionTime: '3:28', rank: 4 },
-  { id: '5', username: 'MazeRunner', completionTime: '3:45', rank: 5 },
-  { id: '6', username: 'QuickSolver', completionTime: '4:02', rank: 6 },
-  { id: '7', username: 'PuzzleNinja', completionTime: '4:15', rank: 7 },
-  { id: '8', username: 'ColorMaster', completionTime: '4:33', rank: 8 },
-  { id: '9', username: 'BrainPower', completionTime: '4:58', rank: 9 },
-  { id: '10', username: 'LogicLord', completionTime: '5:12', rank: 10 },
+  { id: '1', username: 'SpeedMaster', completionTime: '9:34', rank: 1 },
+  { id: '2', username: 'ColorWiz', completionTime: '11:47', rank: 2 },
+  { id: '3', username: 'PuzzlePro', completionTime: '13:12', rank: 3 },
+  { id: '4', username: 'GameChamp', completionTime: '15:28', rank: 4 },
+  { id: '5', username: 'MazeRunner', completionTime: '17:45', rank: 5 },
+  { id: '6', username: 'QuickSolver', completionTime: '19:02', rank: 6 },
+  { id: '7', username: 'PuzzleNinja', completionTime: '21:15', rank: 7 },
+  { id: '8', username: 'ColorMaster', completionTime: '23:33', rank: 8 },
+  { id: '9', username: 'BrainPower', completionTime: '25:58', rank: 9 },
+  { id: '10', username: 'LogicLord', completionTime: '28:12', rank: 10 },
 ];
 
 const getTrophyIcon = (rank: number) => {
@@ -71,7 +71,7 @@ const Leaderboard: React.FC = () => {
             Leaderboard
           </h1>
           <p className="text-xl text-black font-bold px-6 py-3 bg-white/90 backdrop-blur-sm rounded-lg border-2 border-black shadow-lg inline-block">
-            Champions who conquered the color kingdom in lowest time
+            Champions who conquered the color kingdom in lowest total time across all difficulty modes
           </p>
         </div>
 
@@ -123,7 +123,7 @@ const Leaderboard: React.FC = () => {
                   <tr>
                     <th className="px-8 py-6 text-left text-primary font-bold text-lg">Rank</th>
                     <th className="px-8 py-6 text-left text-primary font-bold text-lg">Player</th>
-                    <th className="px-8 py-6 text-right text-primary font-bold text-lg">Completion Time</th>
+                    <th className="px-8 py-6 text-right text-primary font-bold text-lg">Total Completion Time</th>
                   </tr>
                 </thead>
                 <tbody>
