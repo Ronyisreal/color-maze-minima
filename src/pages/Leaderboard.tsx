@@ -28,13 +28,13 @@ const mockLeaderboardData: LeaderboardEntry[] = [
 const getTrophyIcon = (rank: number) => {
   switch (rank) {
     case 1:
-      return <Trophy className="w-8 h-8 text-yellow-500" />;
+      return <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-400" />;
     case 2:
-      return <Medal className="w-8 h-8 text-gray-400" />;
+      return <Medal className="w-6 h-6 text-gray-400 fill-gray-300" />;
     case 3:
-      return <Award className="w-8 h-8 text-amber-600" />;
+      return <Award className="w-6 h-6 text-amber-600 fill-amber-500" />;
     default:
-      return <div className="w-8 h-8 flex items-center justify-center text-muted-foreground font-bold">{rank}</div>;
+      return null;
   }
 };
 
@@ -78,23 +78,33 @@ const Leaderboard: React.FC = () => {
         {/* Top 3 Podium */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           {mockLeaderboardData.slice(0, 3).map((entry, index) => (
-            <Card key={entry.id} className={`relative overflow-hidden bg-card/80 backdrop-blur-sm border-2 ${
-              index === 0 ? 'border-yellow-500 md:order-2' : 
-              index === 1 ? 'border-gray-400 md:order-1' : 
-              'border-amber-600 md:order-3'
-            }`}>
-              <CardContent className="p-6 text-center">
-                <div className="mb-4">
-                  {getTrophyIcon(entry.rank)}
+            <Card key={entry.id} className={`relative overflow-hidden bg-gradient-to-br ${
+              index === 0 ? 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/50 md:order-2' : 
+              index === 1 ? 'from-gray-400/20 to-gray-500/10 border-gray-400/50 md:order-1' : 
+              'from-amber-600/20 to-amber-700/10 border-amber-600/50 md:order-3'
+            } backdrop-blur-sm border-2 shadow-xl`}>
+              <CardContent className="p-8 text-center">
+                <div className="mb-6 flex justify-center">
+                  <div className={`p-4 rounded-full ${
+                    index === 0 ? 'bg-yellow-500/20' : 
+                    index === 1 ? 'bg-gray-400/20' : 
+                    'bg-amber-600/20'
+                  }`}>
+                    {getTrophyIcon(entry.rank)}
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-card-foreground mb-2">
+                <h3 className="text-2xl font-bold text-card-foreground mb-4">
                   {entry.username}
                 </h3>
                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-lg font-semibold">{entry.completionTime}</span>
+                  <Clock className="w-5 h-5" />
+                  <span className="text-xl font-bold">{entry.completionTime}</span>
                 </div>
-                <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                <div className={`absolute top-4 right-4 ${
+                  index === 0 ? 'bg-yellow-500' : 
+                  index === 1 ? 'bg-gray-400' : 
+                  'bg-amber-600'
+                } text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg`}>
                   {entry.rank}
                 </div>
               </CardContent>
@@ -103,35 +113,42 @@ const Leaderboard: React.FC = () => {
         </div>
 
         {/* Full Rankings Table */}
-        <Card className="bg-card/80 backdrop-blur-sm border-border">
+        <Card className="bg-card/90 backdrop-blur-sm border-border shadow-2xl">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted/50">
+                <thead className="bg-gradient-to-r from-primary/20 to-secondary/20">
                   <tr>
-                    <th className="px-6 py-4 text-left text-muted-foreground font-semibold">Rank</th>
-                    <th className="px-6 py-4 text-left text-muted-foreground font-semibold">Player</th>
-                    <th className="px-6 py-4 text-right text-muted-foreground font-semibold">Completion Time</th>
+                    <th className="px-8 py-6 text-left text-primary font-bold text-lg">Rank</th>
+                    <th className="px-8 py-6 text-left text-primary font-bold text-lg">Player</th>
+                    <th className="px-8 py-6 text-right text-primary font-bold text-lg">Completion Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {mockLeaderboardData.map((entry, index) => (
-                    <tr key={entry.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${
-                      index < 3 ? 'bg-accent/20' : ''
+                    <tr key={entry.id} className={`border-b border-border/50 hover:bg-accent/30 transition-all duration-200 ${
+                      index < 3 ? 'bg-gradient-to-r from-accent/10 to-secondary/5' : 'hover:bg-muted/20'
                     }`}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {getTrophyIcon(entry.rank)}
-                          <span className="font-semibold text-card-foreground">#{entry.rank}</span>
+                      <td className="px-8 py-6">
+                        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
+                          index === 0 ? 'bg-yellow-500 text-white shadow-lg' :
+                          index === 1 ? 'bg-gray-400 text-white shadow-lg' :
+                          index === 2 ? 'bg-amber-600 text-white shadow-lg' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          #{entry.rank}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="font-medium text-card-foreground">{entry.username}</span>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-card-foreground text-lg">{entry.username}</span>
+                          {getTrophyIcon(entry.rank)}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-mono text-lg font-semibold text-card-foreground">
+                      <td className="px-8 py-6 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <Clock className="w-5 h-5 text-muted-foreground" />
+                          <span className="font-mono text-xl font-bold text-card-foreground bg-accent/30 px-4 py-2 rounded-lg">
                             {entry.completionTime}
                           </span>
                         </div>
