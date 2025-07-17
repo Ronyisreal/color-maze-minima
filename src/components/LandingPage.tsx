@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export const LandingPage: React.FC = () => {
   const [marioVisible, setMarioVisible] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setTimeout(() => setMarioVisible(true), 500);
@@ -39,6 +42,18 @@ export const LandingPage: React.FC = () => {
           <h1 className="main-title">Welcome to</h1>
           <h2 className="game-title">COLOR MAZE MINIMA</h2>
           <p className="subtitle">A Super Fun Puzzle Adventure!</p>
+          
+          {/* Leaderboard Button */}
+          <div className="mt-8">
+            <Button 
+              onClick={() => navigate('/leaderboard')}
+              variant="secondary"
+              className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary text-lg px-8 py-3 gap-3"
+            >
+              <Trophy className="w-5 h-5" />
+              View Leaderboard
+            </Button>
+          </div>
         </div>
 
         {/* Scroll Indicator */}

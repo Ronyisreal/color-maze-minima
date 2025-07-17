@@ -498,6 +498,24 @@ All colors MUST be HSL.
     padding: 1rem 2rem;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 20px;
+  }
+  
+  /* Doodle Header Font */
+  .doodle-header {
+    font-family: 'Comic Sans MS', 'Chalkduster', 'Bradley Hand', cursive;
+    text-shadow: 
+      3px 3px 0px #1e3a8a,
+      6px 6px 0px #312e81,
+      9px 9px 0px #1e1b4b;
+    transform: rotate(-2deg);
+    animation: doodleWiggle 3s ease-in-out infinite;
+  }
+  
+  @keyframes doodleWiggle {
+    0%, 100% { transform: rotate(-2deg) scale(1); }
+    25% { transform: rotate(-1deg) scale(1.02); }
+    50% { transform: rotate(-3deg) scale(1); }
+    75% { transform: rotate(-1.5deg) scale(1.01); }
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
