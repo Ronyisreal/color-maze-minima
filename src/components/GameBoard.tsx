@@ -494,9 +494,15 @@ export const GameBoard: React.FC = () => {
               <Button onClick={showHint} className="w-full group relative" variant="outline" disabled={gameEnded}>
                 <div className="relative">
                   <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 group-hover:animate-pulse transition-colors animate-none group-hover:animate-[shake_0.5s_ease-in-out_infinite]" />
-                  <span className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity text-yellow-400 text-xs font-bold">!</span>
-                  <span className="absolute -top-2 right-1 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-100 text-yellow-400 text-xs font-bold">!</span>
-                  <span className="absolute -bottom-1 -right-2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-200 text-yellow-400 text-xs font-bold">!</span>
+                  {/* Exclamation marks positioned like rays around the bulb */}
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-100 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute top-1/2 -right-3 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-200 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -bottom-2 -right-2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-300 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-400 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -bottom-2 -left-2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-500 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute top-1/2 -left-3 -translate-y-1/2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-600 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -top-2 -left-2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-700 text-yellow-400 text-xs font-bold">!</span>
                 </div>
                 Hint
               </Button>
