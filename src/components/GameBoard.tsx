@@ -491,7 +491,7 @@ export const GameBoard: React.FC = () => {
                 <RefreshCw className="w-4 h-4 mr-2 group-hover:animate-spin transition-transform" />
                 New Puzzle
               </Button>
-              <Button onClick={showHint} className="w-full group" variant="outline" disabled={gameEnded}>
+              <Button onClick={showHint} className="w-full group bg-black text-white hover:bg-gray-800" variant="default" disabled={gameEnded}>
                 <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 group-hover:animate-pulse transition-colors animate-none group-hover:animate-[shake_0.5s_ease-in-out_infinite]" />
                 Hint
               </Button>
