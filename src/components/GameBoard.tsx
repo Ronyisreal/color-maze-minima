@@ -512,11 +512,9 @@ export const GameBoard: React.FC = () => {
                 {gameCompleted && level < 3 && (
                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
                     <div className="bg-white p-8 rounded-lg text-center animate-fade-in">
-                      <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
                       <h2 className="text-2xl font-bold text-green-600 mb-2">Level Completed! 🎉</h2>
                       <p className="text-gray-600 mb-6">Great job! Ready for the next challenge?</p>
                       <Button onClick={nextLevel} className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 text-lg">
-                        <Trophy className="w-5 h-5 mr-2" />
                         Next Level
                       </Button>
                     </div>
