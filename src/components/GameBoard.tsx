@@ -492,7 +492,7 @@ export const GameBoard: React.FC = () => {
                 New Puzzle
               </Button>
               <Button onClick={showHint} className="w-full group bg-black text-white hover:bg-gray-800" variant="default" disabled={gameEnded}>
-                <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 group-hover:animate-pulse transition-colors animate-none group-hover:animate-[shake_0.5s_ease-in-out_infinite]" />
+                <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 transition-colors" />
                 Hint
               </Button>
               {gameCompleted && level < 3 && (
