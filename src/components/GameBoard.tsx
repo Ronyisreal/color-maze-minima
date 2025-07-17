@@ -419,7 +419,7 @@ export const GameBoard: React.FC = () => {
             <span className="text-xl font-bold text-white">Welcome, {username}!</span>
           </div>
           <p className="text-white">Master the art of graph coloring! Color adjacent pieces with different colors using the minimum possible colors.</p>
-          <div className="flex justify-center items-center gap-6 mt-4">
+          <div className="flex justify-center items-center gap-12 mt-4">
             <div className="flex flex-col items-center gap-1">
               <span className="text-lg font-semibold text-emerald-400">Current Score: {currentScore}</span>
               <span className="text-lg font-semibold text-violet-400">Total Score: {regions.length * 10}</span>
@@ -440,6 +440,7 @@ export const GameBoard: React.FC = () => {
                 </span>
               </div>
             </div>
+            
             <div className="flex items-center gap-2">
               <Timer className="w-5 h-5 text-cyan-400" />
               <span className={`text-lg font-bold transition-colors duration-300 ${
@@ -450,6 +451,7 @@ export const GameBoard: React.FC = () => {
                 {formatTime(timeLeft)}
               </span>
             </div>
+            
             <Button 
               onClick={bailOut} 
               size="sm" 
