@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Block } from './Block';
 import { ColorPalette } from './ColorPalette';
 import { GameStats } from './GameStats';
@@ -32,6 +33,7 @@ const getTimeLimit = (difficulty: Difficulty): number => {
 };
 
 export const GameBoard: React.FC = () => {
+  const navigate = useNavigate();
   const { username, gameProgress, updateModeCompletion } = useUser();
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -287,18 +289,12 @@ export const GameBoard: React.FC = () => {
   };
 
   const bailOut = () => {
-    setGameStarted(false);
-    setGameEnded(false);
-    setTimeLeft(getTimeLimit(difficulty));
-    const resetRegions = regions.map(region => ({ ...region, color: null }));
-    setRegions(resetRegions);
-    setSelectedColor(null);
-    // Reset score to 0
-    setCurrentScore(0);
+    // Navigate back to landing page where user can see Start Playing and View Leaderboard options
+    navigate('/');
     
     toast({
-      title: "Game Reset",
-      description: "Timer and progress reset. Try again!",
+      title: "Returned to Menu",
+      description: "You can now choose to start playing or view the leaderboard.",
     });
   };
 
