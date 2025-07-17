@@ -8,6 +8,7 @@ import { useUser } from '@/contexts/UserContext';
 export const LandingPage: React.FC = () => {
   const [marioVisible, setMarioVisible] = useState(false);
   const [inputUsername, setInputUsername] = useState('');
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const navigate = useNavigate();
   const { username, setUsername } = useUser();
 
@@ -16,12 +17,15 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   const scrollToGame = () => {
-    if (!inputUsername.trim()) {
-      return; // Don't scroll if no username
-    }
-    setUsername(inputUsername.trim());
     const gameSection = document.getElementById('game-section');
     gameSection?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSubmit = () => {
+    if (inputUsername.trim()) {
+      setUsername(inputUsername.trim());
+      setIsSubmitted(true);
+    }
   };
 
   return (
@@ -61,48 +65,44 @@ export const LandingPage: React.FC = () => {
                   placeholder="Enter your username"
                   value={inputUsername}
                   onChange={(e) => setInputUsername(e.target.value)}
-                  onFocus={() => setInputUsername('')}
                   className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-gray-500"
-                  onKeyPress={(e) => e.key === 'Enter' && inputUsername.trim() && scrollToGame()}
+                  onKeyPress={(e) => e.key === 'Enter' && inputUsername.trim() && handleSubmit()}
                 />
               </div>
               
-              {inputUsername.trim() && (
-                <p className="text-white text-lg font-semibold">Welcome Player</p>
+              {/* Submit Button - appears when typing */}
+              {inputUsername.trim() && !isSubmitted && (
+                <Button 
+                  onClick={handleSubmit}
+                  className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3"
+                >
+                  Submit
+                </Button>
               )}
               
-              <Button 
-                onClick={scrollToGame}
-                disabled={!inputUsername.trim()}
-                className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3 gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Start Playing
-              </Button>
+              {/* Start Playing and View Leaderboard - appear after submit */}
+              {isSubmitted && (
+                <>
+                  <Button 
+                    onClick={scrollToGame}
+                    className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3 gap-3"
+                  >
+                    Start Playing
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => navigate('/leaderboard')}
+                    variant="secondary"
+                    className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary text-lg px-8 py-3 gap-3"
+                  >
+                    <Trophy className="w-5 h-5" />
+                    View Leaderboard
+                  </Button>
+                </>
+              )}
             </div>
           </div>
-          
-          {/* Leaderboard Button - only show after username is entered */}
-          {inputUsername.trim() && (
-            <div className="mt-6">
-              <Button 
-                onClick={() => navigate('/leaderboard')}
-                variant="secondary"
-                className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary text-lg px-8 py-3 gap-3"
-              >
-                <Trophy className="w-5 h-5" />
-                View Leaderboard
-              </Button>
-            </div>
-          )}
         </div>
-
-        {/* Scroll Indicator */}
-        {inputUsername.trim() && (
-          <div className="scroll-indicator" onClick={scrollToGame}>
-            <span>Scroll Down to Play</span>
-            <ChevronDown className="scroll-arrow" />
-          </div>
-        )}
       </div>
     </div>
   );

@@ -361,7 +361,7 @@ export const GameBoard: React.FC = () => {
           <div className="text-center">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20">
               <User className="w-16 h-16 mx-auto mb-4 text-white/60" />
-              <h2 className="text-2xl font-bold text-white mb-2">Welcome!</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Welcome Player!</h2>
               <p className="text-white/80">Please enter your username above to start playing.</p>
             </div>
           </div>
