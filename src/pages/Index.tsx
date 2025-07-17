@@ -1,10 +1,18 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { GameBoard } from "@/components/GameBoard";
 import { LandingPage } from "@/components/LandingPage";
 
 const Index = () => {
   const [gameVisible, setGameVisible] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.showGame) {
+      setGameVisible(true);
+    }
+  }, [location.state]);
 
   return (
     <div className="app-container">

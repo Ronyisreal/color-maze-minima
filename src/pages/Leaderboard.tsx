@@ -58,7 +58,7 @@ const Leaderboard: React.FC = () => {
         <div className="mb-6">
           <Button 
             variant="secondary" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/', { state: { showGame: true } })}
             className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary"
           >
             ← Back to Game
