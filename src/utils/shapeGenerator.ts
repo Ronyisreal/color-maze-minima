@@ -195,10 +195,12 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   const numRegions = config.numRegions;
 
   const graphCalculator = new GraphColoringCalculator();
-  graphCalculator.generatePlanarGraph(numRegions);
+  graphCalculator.generatePlanarGraph(numRegions, 2); // Use reasonable connectivity
 
   const regions = generateGeometricRegionsFromGraph(graphCalculator, width, height);
-  updateGeometricAdjacencies(regions);
+  
+  // Use the logical graph structure instead of geometric adjacencies
+  applyLogicalAdjacencies(regions, graphCalculator);
 
   return regions;
 };
@@ -214,11 +216,79 @@ const generateGeometricRegionsFromGraph = (
   const usedWidth = width - 2 * margin;
   const usedHeight = height - 2 * margin;
 
-  // Start with a single large shape and recursively divide it
-  const baseShape = createBaseShape(margin, usedWidth, usedHeight);
-  const dividedRegions = recursivelyDivideShape(baseShape, nodes.length, nodes, width, height);
+  // Create scattered regions instead of wedges
+  const scatteredRegions = createScatteredRegions(nodes, margin, usedWidth, usedHeight);
 
-  return dividedRegions;
+  return scatteredRegions;
+};
+
+const createScatteredRegions = (
+  nodes: { id: string }[], 
+  margin: number, 
+  width: number, 
+  height: number
+): Region[] => {
+  const regions: Region[] = [];
+  const cols = Math.ceil(Math.sqrt(nodes.length));
+  const rows = Math.ceil(nodes.length / cols);
+  
+  const cellWidth = width / cols;
+  const cellHeight = height / rows;
+  
+  for (let i = 0; i < nodes.length; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    
+    // Calculate cell position
+    const centerX = margin + col * cellWidth + cellWidth / 2;
+    const centerY = margin + row * cellHeight + cellHeight / 2;
+    
+    // Add some randomness to avoid perfect grid
+    const offsetX = (Math.random() - 0.5) * cellWidth * 0.3;
+    const offsetY = (Math.random() - 0.5) * cellHeight * 0.3;
+    
+    const center = { 
+      x: centerX + offsetX, 
+      y: centerY + offsetY 
+    };
+    
+    // Create irregular polygon for the region
+    const vertices = createIrregularPolygon(center, cellWidth * 0.35, cellHeight * 0.35);
+    
+    regions.push({
+      id: nodes[i].id,
+      vertices,
+      center,
+      color: null,
+      adjacentRegions: []
+    });
+  }
+  
+  return regions;
+};
+
+const createIrregularPolygon = (center: Point, radiusX: number, radiusY: number): Point[] => {
+  const vertices: Point[] = [];
+  const numVertices = 6 + Math.floor(Math.random() * 3); // 6-8 vertices
+  
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (i / numVertices) * 2 * Math.PI;
+    
+    // Add irregularity
+    const radiusVariation = 0.7 + Math.random() * 0.6; // 0.7 to 1.3
+    const angleVariation = (Math.random() - 0.5) * 0.3; // Small angle variation
+    
+    const finalAngle = angle + angleVariation;
+    const finalRadiusX = radiusX * radiusVariation;
+    const finalRadiusY = radiusY * radiusVariation;
+    
+    const x = center.x + Math.cos(finalAngle) * finalRadiusX;
+    const y = center.y + Math.sin(finalAngle) * finalRadiusY;
+    
+    vertices.push({ x, y });
+  }
+  
+  return vertices;
 };
 
 const createBaseShape = (margin: number, width: number, height: number): Point[] => {
@@ -367,6 +437,22 @@ const createFallbackShape = (center: Point, regionIndex: number, totalRegions: n
   }
   
   return vertices;
+};
+
+const applyLogicalAdjacencies = (regions: Region[], graphCalculator: GraphColoringCalculator): void => {
+  // Reset adjacencies
+  regions.forEach(region => {
+    region.adjacentRegions = [];
+  });
+
+  // Apply adjacencies from the logical graph structure
+  const nodes = graphCalculator.getNodes();
+  nodes.forEach(node => {
+    const region = regions.find(r => r.id === node.id);
+    if (region) {
+      region.adjacentRegions = Array.from(node.adjacents);
+    }
+  });
 };
 
 const updateGeometricAdjacencies = (regions: Region[]): void => {
