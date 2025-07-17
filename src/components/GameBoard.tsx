@@ -289,8 +289,8 @@ export const GameBoard: React.FC = () => {
   };
 
   const bailOut = () => {
-    // Navigate back to landing page where user can see Start Playing and View Leaderboard options
-    navigate('/');
+    // Navigate back to landing page and reset game visibility
+    navigate('/', { state: { bailOut: true } });
   };
 
   const nextLevel = () => {

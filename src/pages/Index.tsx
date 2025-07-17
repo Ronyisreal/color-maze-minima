@@ -12,6 +12,9 @@ const Index = () => {
     if (location.state?.showGame) {
       setGameVisible(true);
     }
+    if (location.state?.bailOut) {
+      setGameVisible(false);
+    }
     // Clear the state after use to prevent unwanted navigation
     if (location.state) {
       window.history.replaceState({}, document.title);
