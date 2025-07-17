@@ -22,7 +22,7 @@ export const calculateScore = (
   const difficultyMultiplier = 1;
   const totalScore = baseScore;
 
-  // Calculate grade based on color efficiency
+  // Calculate grade based on completion
   let grade: 'S' | 'A' | 'B' | 'C' | 'D';
   if (colorsUsed === minimumColors) grade = 'S';
   else if (colorsUsed === minimumColors + 1) grade = 'A';

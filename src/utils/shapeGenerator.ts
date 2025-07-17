@@ -26,35 +26,40 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 export const getDifficultyConfig = (difficulty: Difficulty, level: number): DifficultyConfig => {
   let numRegions = 4;
   let subdivisions = 1;
-  if (difficulty === 'easy') {
-    numRegions = Math.floor(4 + Math.random() * 4); // 4–7
-    subdivisions = 1;
-  } else if (difficulty === 'medium') {
-    numRegions = Math.floor(8 + Math.random() * 4); // 8–11
-    subdivisions = 2;
-  } else if (difficulty === 'hard') {
-    numRegions = Math.floor(12 + Math.random() * 4); // 12–15
-    subdivisions = 3;
-  }
   let minColors: number;
   let complexity: number;
 
-  switch (difficulty) {
-    case 'easy':
-      minColors = 3;
-      complexity = 0.3;
-      break;
-    case 'medium':
-      minColors = 4;
-      complexity = 0.5;
-      break;
-    case 'hard':
-      minColors = 5;
-      complexity = 0.7;
-      break;
-    default:
-      minColors = 3;
-      complexity = 0.3;
+  // Progressive piece count for each difficulty with 3 levels
+  if (difficulty === 'easy') {
+    // Easy: 4-7 pieces across 3 levels, ending with 7 pieces
+    if (level === 1) numRegions = 4;
+    else if (level === 2) numRegions = 5;
+    else numRegions = 7; // Level 3
+    subdivisions = 1;
+    minColors = 3;
+    complexity = 0.3;
+  } else if (difficulty === 'medium') {
+    // Medium: 8-11 pieces across 3 levels, ending with 11 pieces
+    if (level === 1) numRegions = 8;
+    else if (level === 2) numRegions = 9;
+    else numRegions = 11; // Level 3
+    subdivisions = 2;
+    minColors = 4;
+    complexity = 0.5;
+  } else if (difficulty === 'hard') {
+    // Hard: 12-15 pieces across 3 levels, ending with 15 pieces
+    if (level === 1) numRegions = 12;
+    else if (level === 2) numRegions = 13;
+    else numRegions = 15; // Level 3
+    subdivisions = 3;
+    minColors = 5;
+    complexity = 0.7;
+  } else {
+    // Default fallback
+    numRegions = 4;
+    subdivisions = 1;
+    minColors = 3;
+    complexity = 0.3;
   }
 
   return {
