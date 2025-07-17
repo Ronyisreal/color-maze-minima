@@ -20,7 +20,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
 
   useEffect(() => {
     setTimeout(() => setMarioVisible(true), 500);
-  }, []);
+    // If user already has a username, show the submitted state
+    if (username) {
+      setIsSubmitted(true);
+    }
+  }, [username]);
 
   const handleStartGame = () => {
     onStartGame();
@@ -104,25 +108,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
                      Start Playing
                    </Button>
                    
-                   <Button 
-                     onClick={() => navigate('/leaderboard')}
-                     className="bg-warning/80 backdrop-blur-sm hover:bg-warning text-warning-foreground text-lg px-8 py-3 gap-3"
-                   >
-                     <Trophy className="w-5 h-5" />
-                     View Leaderboard
-                   </Button>
+                    <Button 
+                      onClick={() => navigate('/leaderboard', { state: { fromLanding: true } })}
+                      className="bg-warning/80 backdrop-blur-sm hover:bg-warning text-warning-foreground text-lg px-8 py-3 gap-3"
+                    >
+                      <Trophy className="w-5 h-5" />
+                      View Leaderboard
+                    </Button>
                  </>
                )}
                
                {/* Only View Leaderboard when game is visible */}
                {gameVisible && (
-                 <Button 
-                   onClick={() => navigate('/leaderboard')}
-                   className="bg-warning/80 backdrop-blur-sm hover:bg-warning text-warning-foreground text-lg px-8 py-3 gap-3"
-                 >
-                   <Trophy className="w-5 h-5" />
-                   View Leaderboard
-                 </Button>
+                  <Button 
+                    onClick={() => navigate('/leaderboard', { state: { fromGame: true } })}
+                    className="bg-warning/80 backdrop-blur-sm hover:bg-warning text-warning-foreground text-lg px-8 py-3 gap-3"
+                  >
+                    <Trophy className="w-5 h-5" />
+                    View Leaderboard
+                  </Button>
                )}
             </div>
           </div>

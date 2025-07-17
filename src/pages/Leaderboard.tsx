@@ -2,7 +2,7 @@ import React from 'react';
 import { Trophy, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface LeaderboardEntry {
   id: string;
@@ -40,6 +40,9 @@ const getTrophyIcon = (rank: number) => {
 
 const Leaderboard: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isFromGame = location.state?.fromGame;
+  const isFromLanding = location.state?.fromLanding;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/20 via-secondary to-accent/30 relative">
@@ -58,7 +61,13 @@ const Leaderboard: React.FC = () => {
         <div className="mb-6">
           <Button 
             variant="secondary" 
-            onClick={() => navigate('/', { state: { showGame: true } })}
+            onClick={() => {
+              if (isFromGame) {
+                navigate('/', { state: { showGame: true } });
+              } else {
+                navigate('/');
+              }
+            }}
             className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary"
           >
             ← Back to Game

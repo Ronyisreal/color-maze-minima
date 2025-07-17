@@ -12,6 +12,10 @@ const Index = () => {
     if (location.state?.showGame) {
       setGameVisible(true);
     }
+    // Clear the state after use to prevent unwanted navigation
+    if (location.state) {
+      window.history.replaceState({}, document.title);
+    }
   }, [location.state]);
 
   return (
