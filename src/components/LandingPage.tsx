@@ -61,10 +61,16 @@ export const LandingPage: React.FC = () => {
                   placeholder="Enter your username"
                   value={inputUsername}
                   onChange={(e) => setInputUsername(e.target.value)}
+                  onFocus={() => setInputUsername('')}
                   className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-gray-500"
                   onKeyPress={(e) => e.key === 'Enter' && inputUsername.trim() && scrollToGame()}
                 />
               </div>
+              
+              {inputUsername.trim() && (
+                <p className="text-white text-lg font-semibold">Welcome Player</p>
+              )}
+              
               <Button 
                 onClick={scrollToGame}
                 disabled={!inputUsername.trim()}
@@ -75,17 +81,19 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
           
-          {/* Leaderboard Button */}
-          <div className="mt-6">
-            <Button 
-              onClick={() => navigate('/leaderboard')}
-              variant="secondary"
-              className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary text-lg px-8 py-3 gap-3"
-            >
-              <Trophy className="w-5 h-5" />
-              View Leaderboard
-            </Button>
-          </div>
+          {/* Leaderboard Button - only show after username is entered */}
+          {inputUsername.trim() && (
+            <div className="mt-6">
+              <Button 
+                onClick={() => navigate('/leaderboard')}
+                variant="secondary"
+                className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary text-lg px-8 py-3 gap-3"
+              >
+                <Trophy className="w-5 h-5" />
+                View Leaderboard
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Scroll Indicator */}
