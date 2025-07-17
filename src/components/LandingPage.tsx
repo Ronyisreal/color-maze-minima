@@ -58,10 +58,10 @@ export const LandingPage: React.FC = () => {
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Enter your username to start playing"
+                  placeholder="Enter your username"
                   value={inputUsername}
                   onChange={(e) => setInputUsername(e.target.value)}
-                  className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50"
+                  className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-gray-500"
                   onKeyPress={(e) => e.key === 'Enter' && inputUsername.trim() && scrollToGame()}
                 />
               </div>
