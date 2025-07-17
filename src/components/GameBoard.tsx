@@ -6,10 +6,11 @@ import { GameStats } from './GameStats';
 import { DifficultySelector, Difficulty } from './DifficultySelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { RefreshCw, Lightbulb, Trophy, Timer, Frown } from 'lucide-react';
+import { RefreshCw, Lightbulb, Trophy, Timer, Frown, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { generateLargeComplexShape, getDifficultyConfig, Region } from '@/utils/shapeGenerator';
 import { calculateScore, ScoreData } from '@/utils/scoreCalculator';
+import { useUser } from '@/contexts/UserContext';
 
 const AVAILABLE_COLORS = [
   { name: 'Red', value: '#ef4444', hex: '#ef4444' },
@@ -30,6 +31,7 @@ const getTimeLimit = (difficulty: Difficulty): number => {
 };
 
 export const GameBoard: React.FC = () => {
+  const { username } = useUser();
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
@@ -351,10 +353,31 @@ export const GameBoard: React.FC = () => {
     generateNewPuzzle(difficulty, level);
   }, []);
 
+  // Don't render game if no username is set
+  if (!username) {
+    return (
+      <div className="min-h-screen p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20">
+              <User className="w-16 h-16 mx-auto mb-4 text-white/60" />
+              <h2 className="text-2xl font-bold text-white mb-2">Welcome!</h2>
+              <p className="text-white/80">Please enter your username above to start playing.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <User className="w-5 h-5 text-white" />
+            <span className="text-xl font-bold text-white">Welcome, {username}!</span>
+          </div>
           <p className="text-white">Master the art of graph coloring! Color adjacent pieces with different colors using the fewest possible colors.</p>
           <div className="flex justify-center items-center gap-6 mt-4">
             <div className="flex flex-col items-center gap-1">
