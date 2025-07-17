@@ -491,8 +491,13 @@ export const GameBoard: React.FC = () => {
                 <RefreshCw className="w-4 h-4 mr-2 group-hover:animate-spin transition-transform" />
                 New Puzzle
               </Button>
-              <Button onClick={showHint} className="w-full group" variant="outline" disabled={gameEnded}>
-                <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 transition-colors" />
+              <Button onClick={showHint} className="w-full group relative" variant="outline" disabled={gameEnded}>
+                <div className="relative">
+                  <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 group-hover:animate-pulse transition-colors animate-none group-hover:animate-[shake_0.5s_ease-in-out_infinite]" />
+                  <span className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -top-2 right-1 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-100 text-yellow-400 text-xs font-bold">!</span>
+                  <span className="absolute -bottom-1 -right-2 opacity-0 group-hover:opacity-100 group-hover:animate-bounce transition-opacity delay-200 text-yellow-400 text-xs font-bold">!</span>
+                </div>
                 Hint
               </Button>
               {gameCompleted && level < 3 && (
