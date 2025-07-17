@@ -70,21 +70,21 @@ const Leaderboard: React.FC = () => {
           <h1 className="doodle-header text-6xl md:text-8xl font-bold text-white mb-4">
             Leaderboard
           </h1>
-          <p className="text-xl text-white bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent font-bold px-6 py-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 shadow-lg">
-            Champions who conquered all difficulty modes
+          <p className="text-xl text-black font-bold px-6 py-3 bg-white/90 backdrop-blur-sm rounded-lg border-2 border-black shadow-lg inline-block">
+            Champions who conquered all modes in lowest time
           </p>
         </div>
 
-        {/* Top 3 Podium */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* Top 3 Podium - Vertical Layout */}
+        <div className="space-y-6 mb-12 max-w-2xl mx-auto">
           {mockLeaderboardData.slice(0, 3).map((entry, index) => (
             <Card key={entry.id} className={`relative overflow-hidden bg-gradient-to-br ${
-              index === 0 ? 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/50 md:order-2' : 
-              index === 1 ? 'from-gray-400/20 to-gray-500/10 border-gray-400/50 md:order-1' : 
-              'from-amber-600/20 to-amber-700/10 border-amber-600/50 md:order-3'
+              index === 0 ? 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/50' : 
+              index === 1 ? 'from-gray-400/20 to-gray-500/10 border-gray-400/50' : 
+              'from-amber-600/20 to-amber-700/10 border-amber-600/50'
             } backdrop-blur-sm border-2 shadow-xl`}>
-              <CardContent className="p-8 text-center">
-                <div className="mb-6 flex justify-center">
+              <CardContent className="p-8">
+                <div className="flex items-center gap-6">
                   <div className={`p-4 rounded-full ${
                     index === 0 ? 'bg-yellow-500/20' : 
                     index === 1 ? 'bg-gray-400/20' : 
@@ -92,20 +92,22 @@ const Leaderboard: React.FC = () => {
                   }`}>
                     {getTrophyIcon(entry.rank)}
                   </div>
-                </div>
-                <h3 className="text-2xl font-bold text-card-foreground mb-4">
-                  {entry.username}
-                </h3>
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Clock className="w-5 h-5" />
-                  <span className="text-xl font-bold">{entry.completionTime}</span>
-                </div>
-                <div className={`absolute top-4 right-4 ${
-                  index === 0 ? 'bg-yellow-500' : 
-                  index === 1 ? 'bg-gray-400' : 
-                  'bg-amber-600'
-                } text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shadow-lg`}>
-                  {entry.rank}
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-card-foreground mb-2">
+                      {entry.username}
+                    </h3>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-5 h-5" />
+                      <span className="text-xl font-bold">{entry.completionTime}</span>
+                    </div>
+                  </div>
+                  <div className={`${
+                    index === 0 ? 'bg-yellow-500' : 
+                    index === 1 ? 'bg-gray-400' : 
+                    'bg-amber-600'
+                  } text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-xl shadow-lg`}>
+                    {entry.rank}
+                  </div>
                 </div>
               </CardContent>
             </Card>
