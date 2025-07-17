@@ -1,8 +1,11 @@
 
+import { useState } from "react";
 import { GameBoard } from "@/components/GameBoard";
 import { LandingPage } from "@/components/LandingPage";
 
 const Index = () => {
+  const [gameVisible, setGameVisible] = useState(false);
+
   return (
     <div className="app-container">
       {/* Animated Background Throughout */}
@@ -15,10 +18,12 @@ const Index = () => {
         <div className="shooting-star shooting-star-2"></div>
       </div>
       
-      <LandingPage />
-      <div id="game-section" className="game-section">
-        <GameBoard />
-      </div>
+      <LandingPage onStartGame={() => setGameVisible(true)} />
+      {gameVisible && (
+        <div id="game-section" className="game-section">
+          <GameBoard />
+        </div>
+      )}
     </div>
   );
 };

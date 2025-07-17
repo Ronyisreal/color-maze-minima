@@ -5,10 +5,15 @@ import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/contexts/UserContext';
 
-export const LandingPage: React.FC = () => {
+interface LandingPageProps {
+  onStartGame: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame }) => {
   const [marioVisible, setMarioVisible] = useState(false);
   const [inputUsername, setInputUsername] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [placeholderVisible, setPlaceholderVisible] = useState(true);
   const navigate = useNavigate();
   const { username, setUsername } = useUser();
 
@@ -16,9 +21,12 @@ export const LandingPage: React.FC = () => {
     setTimeout(() => setMarioVisible(true), 500);
   }, []);
 
-  const scrollToGame = () => {
-    const gameSection = document.getElementById('game-section');
-    gameSection?.scrollIntoView({ behavior: 'smooth' });
+  const handleStartGame = () => {
+    onStartGame();
+    setTimeout(() => {
+      const gameSection = document.getElementById('game-section');
+      gameSection?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleSubmit = () => {
@@ -62,10 +70,11 @@ export const LandingPage: React.FC = () => {
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder={placeholderVisible ? "Enter your username" : ""}
                   value={inputUsername}
                   onChange={(e) => setInputUsername(e.target.value)}
-                  className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-gray-500"
+                  onFocus={() => setPlaceholderVisible(false)}
+                  className="pl-10 text-center text-lg py-3 bg-white/90 backdrop-blur-sm border-2 border-white/20 focus:border-white/50 text-black placeholder:text-center placeholder:text-gray-500"
                   onKeyPress={(e) => e.key === 'Enter' && inputUsername.trim() && handleSubmit()}
                 />
               </div>
@@ -84,7 +93,7 @@ export const LandingPage: React.FC = () => {
               {isSubmitted && (
                 <>
                   <Button 
-                    onClick={scrollToGame}
+                    onClick={handleStartGame}
                     className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3 gap-3"
                   >
                     Start Playing
