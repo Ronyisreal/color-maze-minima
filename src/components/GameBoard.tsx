@@ -487,12 +487,12 @@ export const GameBoard: React.FC = () => {
             {/* Color palette moved under canvas */}
 
             <div className="space-y-2">
-              <Button onClick={resetGame} className="w-full" variant="outline">
-                <RefreshCw className="w-4 h-4 mr-2" />
+              <Button onClick={resetGame} className="w-full group" variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2 group-hover:animate-spin transition-transform" />
                 New Puzzle
               </Button>
-              <Button onClick={showHint} className="w-full" variant="outline" disabled={gameEnded}>
-                <Lightbulb className="w-4 h-4 mr-2" />
+              <Button onClick={showHint} className="w-full group" variant="outline" disabled={gameEnded}>
+                <Lightbulb className="w-4 h-4 mr-2 group-hover:text-yellow-400 transition-colors" />
                 Hint
               </Button>
               {gameCompleted && level < 3 && (
