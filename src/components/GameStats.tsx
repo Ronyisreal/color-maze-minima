@@ -158,7 +158,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
         <p><strong>Rules:</strong></p>
         <ul className="list-disc list-inside space-y-1">
           <li>Adjacent blocks cannot have the same color</li>
-          <li>Use minimum colors to get perfect score</li>
+          <li>Use minimum colors provided in the palette to complete the level</li>
           <li>Bold selections show block connections</li>
         </ul>
         
@@ -169,7 +169,7 @@ export const GameStats: React.FC<GameStatsProps> = ({
               <strong className="text-blue-800 dark:text-blue-200">Scoring:</strong>
               <ul className="mt-1 space-y-0.5 text-blue-700 dark:text-blue-300">
                 <li>• +10 points per colored region</li>
-                <li>• More levels = more pieces to color</li>
+                <li>• Upper levels = more pieces to color</li>
               </ul>
             </div>
           </div>
