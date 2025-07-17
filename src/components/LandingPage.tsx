@@ -7,9 +7,10 @@ import { useUser } from '@/contexts/UserContext';
 
 interface LandingPageProps {
   onStartGame: () => void;
+  gameVisible: boolean;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisible }) => {
   const [marioVisible, setMarioVisible] = useState(false);
   const [inputUsername, setInputUsername] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -89,26 +90,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame }) => {
                 </Button>
               )}
               
-              {/* Start Playing and View Leaderboard - appear after submit */}
-              {isSubmitted && (
-                <>
-                  <Button 
-                    onClick={handleStartGame}
-                    className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3 gap-3"
-                  >
-                    Start Playing
-                  </Button>
-                  
-                  <Button 
-                    onClick={() => navigate('/leaderboard')}
-                    variant="secondary"
-                    className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary text-lg px-8 py-3 gap-3"
-                  >
-                    <Trophy className="w-5 h-5" />
-                    View Leaderboard
-                  </Button>
-                </>
-              )}
+               {/* Start Playing and View Leaderboard - appear after submit, but only show appropriate button based on game state */}
+               {isSubmitted && !gameVisible && (
+                 <>
+                   <Button 
+                     onClick={handleStartGame}
+                     className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3 gap-3"
+                   >
+                     Start Playing
+                   </Button>
+                   
+                   <Button 
+                     onClick={() => navigate('/leaderboard')}
+                     className="bg-warning/80 backdrop-blur-sm hover:bg-warning text-warning-foreground text-lg px-8 py-3 gap-3"
+                   >
+                     <Trophy className="w-5 h-5" />
+                     View Leaderboard
+                   </Button>
+                 </>
+               )}
+               
+               {/* Only View Leaderboard when game is visible */}
+               {gameVisible && (
+                 <Button 
+                   onClick={() => navigate('/leaderboard')}
+                   className="bg-warning/80 backdrop-blur-sm hover:bg-warning text-warning-foreground text-lg px-8 py-3 gap-3"
+                 >
+                   <Trophy className="w-5 h-5" />
+                   View Leaderboard
+                 </Button>
+               )}
             </div>
           </div>
         </div>

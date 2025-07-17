@@ -18,7 +18,7 @@ const Index = () => {
         <div className="shooting-star shooting-star-2"></div>
       </div>
       
-      <LandingPage onStartGame={() => setGameVisible(true)} />
+      <LandingPage onStartGame={() => setGameVisible(true)} gameVisible={gameVisible} />
       {gameVisible && (
         <div id="game-section" className="game-section">
           <GameBoard />
