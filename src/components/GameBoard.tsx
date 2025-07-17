@@ -291,11 +291,6 @@ export const GameBoard: React.FC = () => {
   const bailOut = () => {
     // Navigate back to landing page where user can see Start Playing and View Leaderboard options
     navigate('/');
-    
-    toast({
-      title: "Returned to Menu",
-      description: "You can now choose to start playing or view the leaderboard.",
-    });
   };
 
   const nextLevel = () => {
