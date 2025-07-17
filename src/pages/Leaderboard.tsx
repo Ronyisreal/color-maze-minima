@@ -71,7 +71,7 @@ const Leaderboard: React.FC = () => {
             Leaderboard
           </h1>
           <p className="text-xl text-black font-bold px-6 py-3 bg-white/90 backdrop-blur-sm rounded-lg border-2 border-black shadow-lg inline-block">
-            Champions who conquered all modes in lowest time
+            Champions who conquered the color kingdom in lowest time
           </p>
         </div>
 
