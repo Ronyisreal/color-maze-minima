@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Medal, Award, Clock } from 'lucide-react';
+import { Trophy, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
@@ -30,9 +30,9 @@ const getTrophyIcon = (rank: number) => {
     case 1:
       return <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-400" />;
     case 2:
-      return <Medal className="w-6 h-6 text-gray-400 fill-gray-300" />;
+      return <Trophy className="w-6 h-6 text-gray-400 fill-gray-300" />;
     case 3:
-      return <Award className="w-6 h-6 text-amber-600 fill-amber-500" />;
+      return <Trophy className="w-6 h-6 text-amber-600 fill-amber-500" />;
     default:
       return null;
   }
@@ -70,7 +70,7 @@ const Leaderboard: React.FC = () => {
           <h1 className="doodle-header text-6xl md:text-8xl font-bold text-white mb-4">
             Leaderboard
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-white">
             Champions who conquered all difficulty modes
           </p>
         </div>
