@@ -33,6 +33,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
   const handleSubmit = () => {
     if (inputUsername.trim()) {
       setUsername(inputUsername.trim());
+      setInputUsername(''); // Clear the input field
       setIsSubmitted(true);
     }
   };
