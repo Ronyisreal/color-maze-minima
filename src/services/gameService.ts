@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
 
 export interface Player {
   id: number
@@ -26,7 +26,11 @@ export const gameService = {
       .single()
 
     if (existingPlayer) {
-      return existingPlayer
+      return {
+        id: existingPlayer["id(primary key)"],
+        username: existingPlayer.username || '',
+        created_at: existingPlayer.created_at
+      }
     }
 
     // Create new player
@@ -37,7 +41,11 @@ export const gameService = {
       .single()
 
     if (error) throw error
-    return data
+    return {
+      id: data["id(primary key)"],
+      username: data.username || '',
+      created_at: data.created_at
+    }
   },
 
   // Save game completion
