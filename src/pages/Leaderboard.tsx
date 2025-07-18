@@ -127,9 +127,9 @@ const Leaderboard: React.FC = () => {
             variant="outline" 
             onClick={fetchLeaderboardData}
             disabled={isLoading}
-            className="bg-white/80 backdrop-blur-sm hover:bg-white"
+            className="bg-white/80 backdrop-blur-sm hover:bg-white group"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 transition-transform duration-300 ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
             Refresh
           </Button>
         </div>
@@ -154,10 +154,10 @@ const Leaderboard: React.FC = () => {
 
         {/* Empty State */}
         {!isLoading && leaderboardData.length === 0 && (
-          <div className="text-center py-12">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-white/60" />
-            <h2 className="text-2xl font-bold text-white mb-2">No Champions Yet!</h2>
-            <p className="text-white/80 mb-6">Be the first to complete all difficulty modes and claim your spot on the leaderboard!</p>
+          <div className="text-center py-12 bg-black/40 backdrop-blur-sm rounded-xl border-2 border-white/20 shadow-2xl max-w-2xl mx-auto">
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-white drop-shadow-lg" />
+            <h2 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">No Champions Yet!</h2>
+            <p className="text-white mb-6 drop-shadow-lg text-lg">Be the first to complete all difficulty modes and claim your spot on the leaderboard!</p>
             <Button 
               onClick={() => navigate('/')}
               className="bg-primary/80 backdrop-blur-sm hover:bg-primary"
