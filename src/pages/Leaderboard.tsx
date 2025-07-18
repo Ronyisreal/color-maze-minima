@@ -154,10 +154,10 @@ const Leaderboard: React.FC = () => {
 
         {/* Empty State */}
         {!isLoading && leaderboardData.length === 0 && (
-          <div className="text-center py-12 bg-black/40 backdrop-blur-sm rounded-xl border-2 border-white/20 shadow-2xl max-w-2xl mx-auto">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-white drop-shadow-lg" />
-            <h2 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">No Champions Yet!</h2>
-            <p className="text-white mb-6 drop-shadow-lg text-lg">Be the first to complete all difficulty modes and claim your spot on the leaderboard!</p>
+          <div className="text-center py-12 max-w-2xl mx-auto">
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-white stroke-[3] drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{filter: 'drop-shadow(2px 2px 0px black) drop-shadow(-2px -2px 0px black) drop-shadow(2px -2px 0px black) drop-shadow(-2px 2px 0px black)'}} />
+            <h2 className="text-2xl font-bold text-white mb-2 stroke-black" style={{textShadow: '2px 2px 0px black, -2px -2px 0px black, 2px -2px 0px black, -2px 2px 0px black'}}>No Champions Yet!</h2>
+            <p className="text-white mb-6 text-lg font-semibold" style={{textShadow: '2px 2px 0px black, -2px -2px 0px black, 2px -2px 0px black, -2px 2px 0px black'}}>Be the first to complete all difficulty modes and claim your spot on the leaderboard!</p>
             <Button 
               onClick={() => navigate('/')}
               className="bg-primary/80 backdrop-blur-sm hover:bg-primary"
