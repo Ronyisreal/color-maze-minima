@@ -1,29 +1,17 @@
-import React from 'react';
-import { Trophy, Clock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Trophy, Clock, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { gameService, LeaderboardEntry } from '@/services/gameService';
+import { useToast } from '@/hooks/use-toast';
 
-interface LeaderboardEntry {
+interface DisplayLeaderboardEntry {
   id: string;
   username: string;
   completionTime: string;
   rank: number;
 }
-
-// Mock data - replace with actual data source
-const mockLeaderboardData: LeaderboardEntry[] = [
-  { id: '1', username: 'SpeedMaster', completionTime: '9:34', rank: 1 },
-  { id: '2', username: 'ColorWiz', completionTime: '11:47', rank: 2 },
-  { id: '3', username: 'PuzzlePro', completionTime: '13:12', rank: 3 },
-  { id: '4', username: 'GameChamp', completionTime: '15:28', rank: 4 },
-  { id: '5', username: 'MazeRunner', completionTime: '17:45', rank: 5 },
-  { id: '6', username: 'QuickSolver', completionTime: '19:02', rank: 6 },
-  { id: '7', username: 'PuzzleNinja', completionTime: '21:15', rank: 7 },
-  { id: '8', username: 'ColorMaster', completionTime: '23:33', rank: 8 },
-  { id: '9', username: 'BrainPower', completionTime: '25:58', rank: 9 },
-  { id: '10', username: 'LogicLord', completionTime: '28:12', rank: 10 },
-];
 
 const getTrophyIcon = (rank: number) => {
   switch (rank) {
@@ -43,6 +31,69 @@ const Leaderboard: React.FC = () => {
   const location = useLocation();
   const isFromGame = location.state?.fromGame;
   const isFromLanding = location.state?.fromLanding;
+  const [leaderboardData, setLeaderboardData] = useState<DisplayLeaderboardEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const fetchLeaderboardData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await gameService.getLeaderboard();
+      
+      // Group by user and calculate total completion time
+      const userTotals = new Map<string, { username: string; totalTime: number; completions: number }>();
+      
+      data.forEach(entry => {
+        const key = entry.username || 'Unknown';
+        if (userTotals.has(key)) {
+          const existing = userTotals.get(key)!;
+          existing.totalTime += entry.completion_time;
+          existing.completions += 1;
+        } else {
+          userTotals.set(key, {
+            username: key,
+            totalTime: entry.completion_time,
+            completions: 1
+          });
+        }
+      });
+
+      // Only show players who completed all 3 difficulty modes
+      const completeUsers = Array.from(userTotals.entries())
+        .filter(([_, userData]) => userData.completions >= 3)
+        .map(([_, userData]) => userData)
+        .sort((a, b) => a.totalTime - b.totalTime);
+
+      const formattedData: DisplayLeaderboardEntry[] = completeUsers.map((user, index) => ({
+        id: `user-${index}`,
+        username: user.username,
+        completionTime: formatTime(user.totalTime),
+        rank: index + 1
+      }));
+
+      setLeaderboardData(formattedData);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      toast({
+        title: "Error Loading Leaderboard",
+        description: "Failed to load leaderboard data. Please try again.",
+        variant: "destructive",
+      });
+      setLeaderboardData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaderboardData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/20 via-secondary to-accent/30 relative">
@@ -57,8 +108,8 @@ const Leaderboard: React.FC = () => {
       </div>
 
       <div className="container mx-auto p-6 relative z-10">
-        {/* Back button */}
-        <div className="mb-6">
+        {/* Back button and Refresh */}
+        <div className="mb-6 flex items-center gap-4">
           <Button 
             variant="secondary" 
             onClick={() => {
@@ -72,6 +123,15 @@ const Leaderboard: React.FC = () => {
           >
             ← Back to Game
           </Button>
+          <Button 
+            variant="outline" 
+            onClick={fetchLeaderboardData}
+            disabled={isLoading}
+            className="bg-white/80 backdrop-blur-sm hover:bg-white"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Doodle Header */}
@@ -84,9 +144,33 @@ const Leaderboard: React.FC = () => {
           </p>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-white" />
+            <p className="text-white text-lg">Loading leaderboard...</p>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && leaderboardData.length === 0 && (
+          <div className="text-center py-12">
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-white/60" />
+            <h2 className="text-2xl font-bold text-white mb-2">No Champions Yet!</h2>
+            <p className="text-white/80 mb-6">Be the first to complete all difficulty modes and claim your spot on the leaderboard!</p>
+            <Button 
+              onClick={() => navigate('/')}
+              className="bg-primary/80 backdrop-blur-sm hover:bg-primary"
+            >
+              Start Playing
+            </Button>
+          </div>
+        )}
+
         {/* Top 3 Podium - Vertical Layout */}
-        <div className="space-y-6 mb-12 max-w-2xl mx-auto">
-          {mockLeaderboardData.slice(0, 3).map((entry, index) => (
+        {!isLoading && leaderboardData.length > 0 && (
+          <div className="space-y-6 mb-12 max-w-2xl mx-auto">
+            {leaderboardData.slice(0, 3).map((entry, index) => (
             <Card key={entry.id} className={`relative overflow-hidden bg-gradient-to-br ${
               index === 0 ? 'from-yellow-500/20 to-yellow-600/10 border-yellow-500/50' : 
               index === 1 ? 'from-gray-400/20 to-gray-500/10 border-gray-400/50' : 
@@ -120,23 +204,25 @@ const Leaderboard: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+              ))}
+          </div>
+        )}
 
         {/* Full Rankings Table */}
-        <Card className="bg-card/90 backdrop-blur-sm border-border shadow-2xl">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-primary/20 to-secondary/20">
-                  <tr>
-                    <th className="px-8 py-6 text-left text-primary font-bold text-lg">Rank</th>
-                    <th className="px-8 py-6 text-left text-primary font-bold text-lg">Player</th>
-                    <th className="px-8 py-6 text-right text-primary font-bold text-lg">Total Completion Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockLeaderboardData.map((entry, index) => (
+        {!isLoading && leaderboardData.length > 0 && (
+          <Card className="bg-card/90 backdrop-blur-sm border-border shadow-2xl">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-primary/20 to-secondary/20">
+                    <tr>
+                      <th className="px-8 py-6 text-left text-primary font-bold text-lg">Rank</th>
+                      <th className="px-8 py-6 text-left text-primary font-bold text-lg">Player</th>
+                      <th className="px-8 py-6 text-right text-primary font-bold text-lg">Total Completion Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboardData.map((entry, index) => (
                     <tr key={entry.id} className={`border-b border-border/50 hover:bg-accent/30 transition-all duration-200 ${
                       index < 3 ? 'bg-gradient-to-r from-accent/10 to-secondary/5' : 'hover:bg-muted/20'
                     }`}>
@@ -165,12 +251,13 @@ const Leaderboard: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

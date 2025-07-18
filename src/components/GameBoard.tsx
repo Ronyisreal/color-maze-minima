@@ -293,7 +293,7 @@ export const GameBoard: React.FC = () => {
     navigate('/', { state: { bailOut: true } });
   };
 
-  const nextLevel = () => {
+  const nextLevel = async () => {
     const maxLevel = 3; // Each difficulty has 3 levels
     if (level < maxLevel) {
       setLevel(level + 1);
@@ -306,7 +306,7 @@ export const GameBoard: React.FC = () => {
       const totalModeTime = Math.floor(totalModeTimeMs / 1000); // Convert to seconds
       
       // Update completion in context
-      updateModeCompletion(difficulty, totalModeTime);
+      await updateModeCompletion(difficulty, totalModeTime);
       
       toast({
         title: "Mode Completed! 🎊",

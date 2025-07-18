@@ -16,7 +16,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [placeholderVisible, setPlaceholderVisible] = useState(true);
   const navigate = useNavigate();
-  const { username, setUsername } = useUser();
+  const { username, setUsername, isLoading } = useUser();
 
   useEffect(() => {
     setTimeout(() => setMarioVisible(true), 500);
@@ -34,9 +34,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
     }, 100);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (inputUsername.trim()) {
-      setUsername(inputUsername.trim());
+      await setUsername(inputUsername.trim());
       setInputUsername(''); // Clear the input field
       setIsSubmitted(true);
     }
@@ -92,9 +92,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartGame, gameVisib
               {inputUsername.trim() && !isSubmitted && (
                 <Button 
                   onClick={handleSubmit}
+                  disabled={isLoading}
                   className="bg-primary/80 backdrop-blur-sm hover:bg-primary text-lg px-8 py-3"
                 >
-                  Submit
+                  {isLoading ? 'Creating Player...' : 'Submit'}
                 </Button>
               )}
               
