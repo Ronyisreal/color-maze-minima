@@ -27,35 +27,61 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
     const strokeWidth = isSelected ? 3 : 2;
     const className = "cursor-pointer hover:stroke-gray-800 transition-all duration-200";
 
-    // Debug logging
-    console.log('Region', block.id, 'vertices:', block.vertices.length, block.vertices);
-
     const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
     return (
       <polygon
         points={points}
         fill={getFill()}
-        stroke="none"
+        stroke={getStroke()}
+        strokeWidth={strokeWidth}
         className={className}
         onClick={handleClick}
-        opacity={0.7}
+        opacity={0.8}
       />
     );
   };
+
+  // Calculate a better center position that's guaranteed to be inside the polygon
+  const getTextPosition = () => {
+    // Use the calculated centroid, but ensure it's well within the shape
+    const centroid = block.center;
+    
+    // For better visibility, we can slightly adjust the position
+    // by moving it towards the center of the bounding box
+    const minX = Math.min(...block.vertices.map(v => v.x));
+    const maxX = Math.max(...block.vertices.map(v => v.x));
+    const minY = Math.min(...block.vertices.map(v => v.y));
+    const maxY = Math.max(...block.vertices.map(v => v.y));
+    
+    const boxCenter = {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2
+    };
+    
+    // Use a weighted average to ensure the text is well inside
+    const adjustedCenter = {
+      x: centroid.x * 0.7 + boxCenter.x * 0.3,
+      y: centroid.y * 0.7 + boxCenter.y * 0.3
+    };
+    
+    return adjustedCenter;
+  };
+
+  const textPosition = getTextPosition();
 
   return (
     <g>
       {renderShape()}
       <text
-        x={block.center.x}
-        y={block.center.y}
+        x={textPosition.x}
+        y={textPosition.y}
         textAnchor="middle"
         dominantBaseline="middle"
         className="text-lg font-bold pointer-events-none select-none"
         fill={block.color ? '#ffffff' : '#1f2937'}
         stroke={block.color ? '#000000' : '#ffffff'}
         strokeWidth="0.5"
-        style={{ fontSize: '18px', fontWeight: 'bold' }}
+        style={{ fontSize: '20px', fontWeight: 'bold' }}
       >
         {block.id.split('-')[1]}
       </text>

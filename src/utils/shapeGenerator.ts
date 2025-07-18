@@ -24,48 +24,48 @@ export interface DifficultyConfig {
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export const getDifficultyConfig = (difficulty: Difficulty, level: number): DifficultyConfig => {
-  let numRegions = 4;
-  let subdivisions = 1;
+  let numRegions = 6;
+  let subdivisions = 2;
   let minColors: number;
   let complexity: number;
 
-  // Progressive piece count for each difficulty with 3 levels
+  // Much harder difficulty levels as requested
   if (difficulty === 'easy') {
-    // Easy: 4-7 pieces across 3 levels, ending with 7 pieces
-    if (level === 1) numRegions = 4;
-    else if (level === 2) numRegions = 5;
-    else numRegions = 7; // Level 3
-    subdivisions = 1;
-    minColors = 3;
-    complexity = 0.3;
-  } else if (difficulty === 'medium') {
-    // Medium: 8-11 pieces across 3 levels, ending with 11 pieces
-    if (level === 1) numRegions = 8;
-    else if (level === 2) numRegions = 9;
-    else numRegions = 11; // Level 3
+    // Easy made "very hard" - 6-8 pieces across 3 levels
+    if (level === 1) numRegions = 6;
+    else if (level === 2) numRegions = 7;
+    else numRegions = 8; // Level 3
     subdivisions = 2;
     minColors = 4;
-    complexity = 0.5;
-  } else if (difficulty === 'hard') {
-    // Hard: 12-15 pieces across 3 levels, ending with 15 pieces
-    if (level === 1) numRegions = 12;
-    else if (level === 2) numRegions = 13;
-    else numRegions = 15; // Level 3
+    complexity = 0.6;
+  } else if (difficulty === 'medium') {
+    // Medium made "crazy hard" - 10-14 pieces across 3 levels
+    if (level === 1) numRegions = 10;
+    else if (level === 2) numRegions = 12;
+    else numRegions = 14; // Level 3
     subdivisions = 3;
-    minColors = 5;
-    complexity = 0.7;
+    minColors = 6;
+    complexity = 0.8;
+  } else if (difficulty === 'hard') {
+    // Hard made "teeth grinding hard" - 16-22 pieces across 3 levels
+    if (level === 1) numRegions = 16;
+    else if (level === 2) numRegions = 19;
+    else numRegions = 22; // Level 3
+    subdivisions = 4;
+    minColors = 8;
+    complexity = 0.9;
   } else {
     // Default fallback
-    numRegions = 4;
-    subdivisions = 1;
-    minColors = 3;
-    complexity = 0.3;
+    numRegions = 6;
+    subdivisions = 2;
+    minColors = 4;
+    complexity = 0.6;
   }
 
   return {
     numRegions,
     minColors,
-    complexity: Math.min(complexity + (level - 1) * 0.05, 0.9),
+    complexity: Math.min(complexity + (level - 1) * 0.05, 0.95),
     subdivisions
   };
 };
@@ -234,36 +234,44 @@ const createScatteredRegions = (
   height: number
 ): Region[] => {
   const regions: Region[] = [];
-  const cols = Math.ceil(Math.sqrt(nodes.length));
-  const rows = Math.ceil(nodes.length / cols);
   
-  const cellWidth = width / cols;
-  const cellHeight = height / rows;
+  // Create a single large shape that fills the canvas without white spaces
+  const baseShape = createBaseShape(margin, width, height);
   
-  for (let i = 0; i < nodes.length; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    
-    // Calculate cell position
-    const centerX = margin + col * cellWidth + cellWidth / 2;
-    const centerY = margin + row * cellHeight + cellHeight / 2;
-    
-    // Add some randomness to avoid perfect grid
-    const offsetX = (Math.random() - 0.5) * cellWidth * 0.3;
-    const offsetY = (Math.random() - 0.5) * cellHeight * 0.3;
-    
-    const center = { 
-      x: centerX + offsetX, 
-      y: centerY + offsetY 
-    };
-    
-    // Create irregular polygon for the region
-    const vertices = createIrregularPolygon(center, cellWidth * 0.35, cellHeight * 0.35);
+  // Use Voronoi-like division to create connected regions without gaps
+  return createConnectedRegionsFromShape(baseShape, nodes, width, height, margin);
+};
+
+const createConnectedRegionsFromShape = (
+  baseShape: Point[],
+  nodes: { id: string }[],
+  width: number,
+  height: number,
+  margin: number
+): Region[] => {
+  const regions: Region[] = [];
+  const numRegions = nodes.length;
+  
+  if (numRegions === 1) {
+    return [{
+      id: nodes[0].id,
+      vertices: baseShape,
+      center: calculateCentroid(baseShape),
+      color: null,
+      adjacentRegions: []
+    }];
+  }
+  
+  // Create regions by dividing the base shape
+  const center = calculateCentroid(baseShape);
+  
+  for (let i = 0; i < numRegions; i++) {
+    const regionVertices = createConnectedSubShape(baseShape, i, numRegions, center);
     
     regions.push({
       id: nodes[i].id,
-      vertices,
-      center,
+      vertices: regionVertices,
+      center: calculateCentroid(regionVertices),
       color: null,
       adjacentRegions: []
     });

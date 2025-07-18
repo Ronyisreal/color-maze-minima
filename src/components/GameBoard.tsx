@@ -314,14 +314,36 @@ export const GameBoard: React.FC = () => {
         duration: 5000,
       });
 
-      // Check if all modes are completed after state update
-      setTimeout(() => {
-        // This will trigger after the context state is updated
-        if (gameProgress.allModesCompleted || 
-            (gameProgress.easy.completed && gameProgress.medium.completed && gameProgress.hard.completed)) {
-          setShowCongratulations(true);
-        }
-      }, 100);
+      // Auto-progression logic: automatically switch to next difficulty
+      if (difficulty === 'easy') {
+        // Auto-switch to medium mode after completing easy
+        setTimeout(() => {
+          toast({
+            title: "Advancing to Medium Mode! 🔥",
+            description: "Get ready for a more challenging experience!",
+            duration: 3000,
+          });
+          changeDifficulty('medium');
+        }, 2000);
+      } else if (difficulty === 'medium') {
+        // Auto-switch to hard mode after completing medium
+        setTimeout(() => {
+          toast({
+            title: "Advancing to Hard Mode! 💀",
+            description: "Prepare yourself for the ultimate challenge!",
+            duration: 3000,
+          });
+          changeDifficulty('hard');
+        }, 2000);
+      } else {
+        // Hard mode completed - check if all modes are completed
+        setTimeout(() => {
+          if (gameProgress.allModesCompleted || 
+              (gameProgress.easy.completed && gameProgress.medium.completed && gameProgress.hard.completed)) {
+            setShowCongratulations(true);
+          }
+        }, 100);
+      }
     }
   };
 
