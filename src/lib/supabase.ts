@@ -13,9 +13,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   // Create a dummy client to prevent crashes
   supabase = {
     from: () => ({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-      insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
-      order: () => Promise.resolve({ data: [], error: null })
+      select: () => ({ 
+        eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }),
+        order: () => Promise.resolve({ data: [], error: null })
+      }),
+      insert: () => ({ select: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) })
     })
   };
 } else {
