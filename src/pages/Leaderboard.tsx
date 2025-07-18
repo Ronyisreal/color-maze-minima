@@ -111,7 +111,7 @@ const Leaderboard: React.FC = () => {
         {/* Back button and Refresh */}
         <div className="mb-6 flex items-center gap-4">
           <Button 
-            variant="secondary" 
+            variant="outline" 
             onClick={() => {
               if (isFromGame) {
                 navigate('/', { state: { showGame: true } });
@@ -119,7 +119,7 @@ const Leaderboard: React.FC = () => {
                 navigate('/');
               }
             }}
-            className="bg-secondary/80 backdrop-blur-sm hover:bg-secondary"
+            className="bg-white/80 backdrop-blur-sm hover:bg-white"
           >
             ← Back to Game
           </Button>
@@ -129,7 +129,7 @@ const Leaderboard: React.FC = () => {
             disabled={isLoading}
             className="bg-white/80 backdrop-blur-sm hover:bg-white group"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 transition-transform duration-300 ${isLoading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 transition-transform duration-500 ${isLoading ? 'animate-spin' : 'group-hover:animate-spin'}`} />
             Refresh
           </Button>
         </div>
@@ -155,7 +155,7 @@ const Leaderboard: React.FC = () => {
         {/* Empty State */}
         {!isLoading && leaderboardData.length === 0 && (
           <div className="text-center py-12 max-w-2xl mx-auto">
-            <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-400 drop-shadow-md" />
+            <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-500 drop-shadow-md" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2 drop-shadow-sm">No Champions Yet!</h2>
             <p className="text-gray-800 mb-6 text-lg font-medium drop-shadow-sm">Be the first to complete all difficulty modes and claim your spot on the leaderboard!</p>
             <Button 
