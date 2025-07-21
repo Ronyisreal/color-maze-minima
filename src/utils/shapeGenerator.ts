@@ -396,40 +396,112 @@ const dividePoly = (shape: Point[]): [Point[], Point[]] => {
   
   const center = calculateCentroid(shape);
   
-  // Find two points on the perimeter that are roughly opposite
+  // Create more random and interesting division patterns
   const numPoints = shape.length;
   const startIdx = Math.floor(Math.random() * numPoints);
-  const endIdx = (startIdx + Math.floor(numPoints / 2) + Math.floor(Math.random() * 3 - 1)) % numPoints;
+  
+  // Instead of opposite points, create more varied divisions
+  const minSeparation = Math.floor(numPoints / 4);
+  const maxSeparation = Math.floor(numPoints * 3 / 4);
+  const separation = minSeparation + Math.floor(Math.random() * (maxSeparation - minSeparation));
+  const endIdx = (startIdx + separation) % numPoints;
   
   const startPoint = shape[startIdx];
   const endPoint = shape[endIdx];
   
-  // Create division line through the polygon
-  const divisionPoints = createDivisionLine(startPoint, endPoint, center);
+  // Create multiple interconnected division lines for more complex shapes
+  const primaryDivision = createDivisionLine(startPoint, endPoint, center);
   
-  // Split the polygon along this line
-  return splitPolygonAlongLine(shape, startIdx, endIdx, divisionPoints);
+  // Add branch lines occasionally for more complexity
+  const branchDivisions = createBranchDivisions(primaryDivision, shape, center);
+  
+  // Combine all division points
+  const allDivisionPoints = [...primaryDivision, ...branchDivisions];
+  
+  // Split the polygon along this complex line
+  return splitPolygonAlongComplexLine(shape, startIdx, endIdx, allDivisionPoints);
+};
+
+const createBranchDivisions = (mainLine: Point[], shape: Point[], center: Point): Point[] => {
+  const branches: Point[] = [];
+  
+  // 30% chance to add branch lines for more complexity
+  if (Math.random() < 0.3 && mainLine.length > 2) {
+    const branchStart = mainLine[Math.floor(mainLine.length / 2)];
+    
+    // Find a random point on the perimeter for branch end
+    const branchEndIdx = Math.floor(Math.random() * shape.length);
+    const branchEnd = shape[branchEndIdx];
+    
+    // Create a shorter, more curved branch
+    const branchPoints = createShortCurvyLine(branchStart, branchEnd, center);
+    branches.push(...branchPoints);
+  }
+  
+  return branches;
+};
+
+const createShortCurvyLine = (start: Point, end: Point, center: Point): Point[] => {
+  const points: Point[] = [];
+  const numPoints = 2 + Math.floor(Math.random() * 2); // 2-3 points
+  
+  for (let i = 1; i < numPoints; i++) {
+    const t = i / numPoints;
+    const baseX = start.x + t * (end.x - start.x);
+    const baseY = start.y + t * (end.y - start.y);
+    
+    // Add curved variation
+    const curve = Math.sin(t * Math.PI) * (Math.random() - 0.5) * 40;
+    const perpX = -(end.y - start.y);
+    const perpY = (end.x - start.x);
+    const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+    
+    if (perpLength > 0) {
+      points.push({
+        x: baseX + (perpX / perpLength) * curve,
+        y: baseY + (perpY / perpLength) * curve
+      });
+    }
+  }
+  
+  return points;
 };
 
 const createDivisionLine = (start: Point, end: Point, center: Point): Point[] => {
   const divisionPoints: Point[] = [start];
   
-  // Add some variation to the division line to make it more organic
-  const numIntermediatePoints = 2 + Math.floor(Math.random() * 2); // 2-3 points
+  // Create much more curvy and tangled division lines
+  const numIntermediatePoints = 4 + Math.floor(Math.random() * 4); // 4-7 points for more complexity
   
   for (let i = 1; i < numIntermediatePoints; i++) {
     const t = i / numIntermediatePoints;
     const baseX = start.x + t * (end.x - start.x);
     const baseY = start.y + t * (end.y - start.y);
     
-    // Add slight curve toward or away from center
+    // Add much more dramatic curves and tangles
     const toCenterX = center.x - baseX;
     const toCenterY = center.y - baseY;
-    const curvature = (Math.random() - 0.5) * 0.3; // Random curve
+    
+    // Create complex curvature with multiple sine waves for organic feel
+    const curvature1 = Math.sin(t * Math.PI * 2) * (Math.random() - 0.5) * 0.8;
+    const curvature2 = Math.sin(t * Math.PI * 4) * (Math.random() - 0.5) * 0.4;
+    const curvature3 = Math.sin(t * Math.PI * 6) * (Math.random() - 0.5) * 0.2;
+    
+    const totalCurvature = curvature1 + curvature2 + curvature3;
+    
+    // Add perpendicular offset for more tangled lines
+    const perpX = -(end.y - start.y);
+    const perpY = (end.x - start.x);
+    const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
+    const normalizedPerpX = perpLength > 0 ? perpX / perpLength : 0;
+    const normalizedPerpY = perpLength > 0 ? perpY / perpLength : 0;
+    
+    // Random tangent offset
+    const tangentOffset = (Math.random() - 0.5) * 60;
     
     divisionPoints.push({
-      x: baseX + toCenterX * curvature,
-      y: baseY + toCenterY * curvature
+      x: baseX + toCenterX * totalCurvature + normalizedPerpX * tangentOffset,
+      y: baseY + toCenterY * totalCurvature + normalizedPerpY * tangentOffset
     });
   }
   
@@ -437,11 +509,27 @@ const createDivisionLine = (start: Point, end: Point, center: Point): Point[] =>
   return divisionPoints;
 };
 
-const splitPolygonAlongLine = (
+const removeDuplicatePoints = (points: Point[]): Point[] => {
+  const tolerance = 5;
+  const uniquePoints: Point[] = [];
+  
+  for (const point of points) {
+    const isDuplicate = uniquePoints.some(existing => 
+      distance(point, existing) < tolerance
+    );
+    if (!isDuplicate) {
+      uniquePoints.push(point);
+    }
+  }
+  
+  return uniquePoints;
+};
+
+const splitPolygonAlongComplexLine = (
   shape: Point[], 
   startIdx: number, 
   endIdx: number, 
-  divisionPoints: Point[]
+  allDivisionPoints: Point[]
 ): [Point[], Point[]] => {
   const part1: Point[] = [];
   const part2: Point[] = [];
@@ -454,9 +542,10 @@ const splitPolygonAlongLine = (
   }
   part1.push(shape[endIdx]);
   
-  // Add division line points in reverse for part1
-  for (let i = divisionPoints.length - 1; i >= 0; i--) {
-    part1.push(divisionPoints[i]);
+  // Add division line points in reverse for part1 - but filter for unique points
+  const uniqueDivisionPoints = removeDuplicatePoints(allDivisionPoints);
+  for (let i = uniqueDivisionPoints.length - 1; i >= 0; i--) {
+    part1.push(uniqueDivisionPoints[i]);
   }
   
   // Add points from end to start (continuing clockwise)
@@ -468,19 +557,22 @@ const splitPolygonAlongLine = (
   part2.push(shape[startIdx]);
   
   // Add division line points for part2
-  for (const point of divisionPoints) {
+  for (const point of uniqueDivisionPoints) {
     part2.push(point);
   }
   
-  // Ensure we have valid polygons
-  if (part1.length < 3) {
+  // Clean up and ensure valid polygons
+  const cleanPart1 = removeDuplicatePoints(part1);
+  const cleanPart2 = removeDuplicatePoints(part2);
+  
+  if (cleanPart1.length < 3) {
     return [shape, []];
   }
-  if (part2.length < 3) {
+  if (cleanPart2.length < 3) {
     return [shape, []];
   }
   
-  return [part1, part2];
+  return [cleanPart1, cleanPart2];
 };
 
 const createBoundaryPoint = (baseShape: Point[], angle: number, center: Point): Point => {
