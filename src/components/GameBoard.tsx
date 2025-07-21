@@ -91,6 +91,10 @@ export const GameBoard: React.FC = () => {
     
     const minColors = calculateMinimumColorsBacktracking(newRegions);
     console.log('Calculated minimum colors:', minColors);
+    console.log('Validating adjacencies:');
+    newRegions.forEach(region => {
+      console.log(`Region ${region.id}: adjacent to [${region.adjacentRegions.join(', ')}]`);
+    });
     
     const finalMinColors = minColors; // Use actual calculated chromatic number
     

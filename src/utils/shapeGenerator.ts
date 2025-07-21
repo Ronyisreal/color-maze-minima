@@ -199,27 +199,30 @@ export const generateLargeComplexShape = (width: number, height: number, difficu
   const config = getDifficultyConfig(difficulty, level);
   const numRegions = config.numRegions;
 
-  const graphCalculator = new GraphColoringCalculator();
-  graphCalculator.generatePlanarGraph(numRegions, 2); // Use reasonable connectivity
-
-  const regions = generateGeometricRegionsFromGraph(graphCalculator, width, height);
+  // Generate geometric regions first
+  const regions = generateGeometricRegions(numRegions, width, height);
   
-  // Use the logical graph structure instead of geometric adjacencies
-  applyLogicalAdjacencies(regions, graphCalculator);
+  // Calculate adjacencies based on actual geometric boundaries
+  updateGeometricAdjacencies(regions);
 
   return regions;
 };
 
-const generateGeometricRegionsFromGraph = (
-  graphCalculator: GraphColoringCalculator, 
+const generateGeometricRegions = (
+  numRegions: number, 
   width: number, 
   height: number
 ): Region[] => {
-  const nodes = graphCalculator.getNodes();
   const regions: Region[] = [];
   const margin = 60;
   const usedWidth = width - 2 * margin;
   const usedHeight = height - 2 * margin;
+
+  // Create node objects for compatibility
+  const nodes = [];
+  for (let i = 1; i <= numRegions; i++) {
+    nodes.push({ id: `region-${i}` });
+  }
 
   // Create scattered regions instead of wedges
   const scatteredRegions = createScatteredRegions(nodes, margin, usedWidth, usedHeight);
