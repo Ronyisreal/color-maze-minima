@@ -262,22 +262,8 @@ const createConnectedRegionsFromShape = (
     }];
   }
   
-  // Create regions by dividing the base shape
-  const center = calculateCentroid(baseShape);
-  
-  for (let i = 0; i < numRegions; i++) {
-    const regionVertices = createConnectedSubShape(baseShape, i, numRegions, center);
-    
-    regions.push({
-      id: nodes[i].id,
-      vertices: regionVertices,
-      center: calculateCentroid(regionVertices),
-      color: null,
-      adjacentRegions: []
-    });
-  }
-  
-  return regions;
+  // Create random internal divisions like the reference image
+  return createRandomDivisions(baseShape, nodes, width, height, margin);
 };
 
 const createIrregularPolygon = (center: Point, radiusX: number, radiusY: number): Point[] => {
@@ -328,80 +314,158 @@ const createBaseShape = (margin: number, width: number, height: number): Point[]
   return vertices;
 };
 
-const recursivelyDivideShape = (
-  shape: Point[], 
-  numRegions: number, 
-  nodes: { id: string }[], 
-  width: number, 
-  height: number
-): Region[] => {
-  if (numRegions === 1) {
-    return [{
-      id: nodes[0].id,
-      vertices: shape,
-      center: calculateCentroid(shape),
-      color: null,
-      adjacentRegions: []
-    }];
-  }
 
+const createRandomDivisions = (
+  baseShape: Point[],
+  nodes: { id: string }[],
+  width: number,
+  height: number,
+  margin: number
+): Region[] => {
   const regions: Region[] = [];
-  const center = calculateCentroid(shape);
+  const numRegions = nodes.length;
+  const center = calculateCentroid(baseShape);
   
-  // Create connected regions by dividing the shape into wedges
-  for (let i = 0; i < Math.min(numRegions, nodes.length); i++) {
-    const subShape = createConnectedSubShape(shape, i, numRegions, center);
+  // Create random division lines from perimeter to perimeter
+  const divisionLines = createRandomDivisionLines(baseShape, numRegions, center);
+  
+  // Build regions based on these division lines
+  const regionPolygons = buildRegionsFromDivisions(baseShape, divisionLines, numRegions);
+  
+  // Create region objects
+  for (let i = 0; i < Math.min(numRegions, regionPolygons.length); i++) {
+    if (regionPolygons[i] && regionPolygons[i].length >= 3) {
+      regions.push({
+        id: nodes[i].id,
+        vertices: regionPolygons[i],
+        center: calculateCentroid(regionPolygons[i]),
+        color: null,
+        adjacentRegions: []
+      });
+    }
+  }
+  
+  // If we don't have enough regions, create fallback regions
+  while (regions.length < numRegions) {
+    const fallbackShape = createFallbackShape(center, regions.length, numRegions);
     regions.push({
-      id: nodes[i].id,
-      vertices: subShape,
-      center: calculateCentroid(subShape),
+      id: nodes[regions.length].id,
+      vertices: fallbackShape,
+      center: calculateCentroid(fallbackShape),
       color: null,
       adjacentRegions: []
     });
   }
-
+  
   return regions;
 };
 
-const createConnectedSubShape = (
-  baseShape: Point[], 
-  regionIndex: number, 
-  totalRegions: number, 
+const createRandomDivisionLines = (
+  baseShape: Point[],
+  numRegions: number,
   center: Point
-): Point[] => {
-  const vertices: Point[] = [];
+): { start: Point; end: Point }[] => {
+  const lines: { start: Point; end: Point }[] = [];
+  const numLines = Math.max(1, numRegions - 2); // At least 1 line for 3+ regions
   
-  // Create wedge-like divisions that share boundaries
-  const anglePerRegion = (2 * Math.PI) / totalRegions;
-  const startAngle = regionIndex * anglePerRegion;
-  const endAngle = (regionIndex + 1) * anglePerRegion;
+  // Get perimeter points
+  const perimeterLength = baseShape.length;
   
-  // Add center point
-  vertices.push(center);
-  
-  // Add boundary points along the perimeter
-  const perimeterPoints = [];
-  for (let i = 0; i < baseShape.length; i++) {
-    const point = baseShape[i];
-    const angle = Math.atan2(point.y - center.y, point.x - center.x);
-    const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
+  for (let i = 0; i < numLines; i++) {
+    // Pick two random points on the perimeter
+    const startIndex = Math.floor(Math.random() * perimeterLength);
+    let endIndex = Math.floor(Math.random() * perimeterLength);
     
-    // Check if point is within this region's angle range
-    if (normalizedAngle >= startAngle && normalizedAngle <= endAngle) {
-      perimeterPoints.push(point);
+    // Ensure the end point is not too close to start point
+    while (Math.abs(endIndex - startIndex) < 3 && Math.abs(endIndex - startIndex) > perimeterLength - 3) {
+      endIndex = Math.floor(Math.random() * perimeterLength);
+    }
+    
+    lines.push({
+      start: baseShape[startIndex],
+      end: baseShape[endIndex]
+    });
+  }
+  
+  return lines;
+};
+
+const buildRegionsFromDivisions = (
+  baseShape: Point[],
+  divisionLines: { start: Point; end: Point }[],
+  numRegions: number
+): Point[][] => {
+  const regions: Point[][] = [];
+  
+  // For simple case, create regions using the division lines
+  if (divisionLines.length === 0) {
+    return [baseShape];
+  }
+  
+  // Create regions by combining perimeter segments with division lines
+  const segmentedPerimeter = segmentPerimeterByDivisions(baseShape, divisionLines);
+  
+  // Build each region polygon
+  for (let i = 0; i < numRegions && i < segmentedPerimeter.length; i++) {
+    const regionVertices: Point[] = [];
+    
+    // Add perimeter segment
+    regionVertices.push(...segmentedPerimeter[i]);
+    
+    // Add relevant division line endpoints
+    for (const line of divisionLines) {
+      if (isPointNearPerimeterSegment(line.start, segmentedPerimeter[i]) ||
+          isPointNearPerimeterSegment(line.end, segmentedPerimeter[i])) {
+        regionVertices.push(line.start, line.end);
+      }
+    }
+    
+    // Remove duplicates and ensure proper polygon
+    const cleanedVertices = removeDuplicatePoints(regionVertices);
+    if (cleanedVertices.length >= 3) {
+      regions.push(cleanedVertices);
     }
   }
   
-  // Add start and end boundary lines
-  const startBoundaryPoint = createBoundaryPoint(baseShape, startAngle, center);
-  const endBoundaryPoint = createBoundaryPoint(baseShape, endAngle, center);
+  return regions.length > 0 ? regions : [baseShape];
+};
+
+const segmentPerimeterByDivisions = (
+  baseShape: Point[],
+  divisionLines: { start: Point; end: Point }[]
+): Point[][] => {
+  const segments: Point[][] = [];
+  const numSegments = Math.max(2, divisionLines.length + 1);
+  const pointsPerSegment = Math.floor(baseShape.length / numSegments);
   
-  // Assemble the shape
-  vertices.push(startBoundaryPoint);
-  vertices.push(...perimeterPoints);
-  vertices.push(endBoundaryPoint);
+  for (let i = 0; i < numSegments; i++) {
+    const startIdx = i * pointsPerSegment;
+    const endIdx = i === numSegments - 1 ? baseShape.length : (i + 1) * pointsPerSegment;
+    segments.push(baseShape.slice(startIdx, endIdx));
+  }
   
-  return vertices.length >= 3 ? vertices : createFallbackShape(center, regionIndex, totalRegions);
+  return segments;
+};
+
+const isPointNearPerimeterSegment = (point: Point, segment: Point[]): boolean => {
+  const tolerance = 20;
+  return segment.some(segPoint => distance(point, segPoint) < tolerance);
+};
+
+const removeDuplicatePoints = (points: Point[]): Point[] => {
+  const tolerance = 5;
+  const uniquePoints: Point[] = [];
+  
+  for (const point of points) {
+    const isDuplicate = uniquePoints.some(existing => 
+      distance(point, existing) < tolerance
+    );
+    if (!isDuplicate) {
+      uniquePoints.push(point);
+    }
+  }
+  
+  return uniquePoints;
 };
 
 const createBoundaryPoint = (baseShape: Point[], angle: number, center: Point): Point => {
