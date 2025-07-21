@@ -24,20 +24,38 @@ export const Block: React.FC<BlockProps> = ({ block, onColor, isSelected }) => {
   };
 
   const renderShape = () => {
-    const strokeWidth = isSelected ? 3 : 2;
+    const strokeWidth = isSelected ? 4 : 2; // Increased from 3 to 4 for better visibility
     const className = "cursor-pointer hover:stroke-gray-800 transition-all duration-200";
 
     const points = block.vertices.map(v => `${v.x},${v.y}`).join(' ');
     return (
-      <polygon
-        points={points}
-        fill={getFill()}
-        stroke={getStroke()}
-        strokeWidth={strokeWidth}
-        className={className}
-        onClick={handleClick}
-        opacity={0.8}
-      />
+      <g>
+        {/* Main polygon */}
+        <polygon
+          points={points}
+          fill={getFill()}
+          stroke={getStroke()}
+          strokeWidth={strokeWidth}
+          className={className}
+          onClick={handleClick}
+          opacity={0.8}
+          strokeLinejoin="round" // Smoother corners
+          strokeLinecap="round"
+        />
+        {/* Additional selection highlight overlay for thin regions */}
+        {isSelected && (
+          <polygon
+            points={points}
+            fill="none"
+            stroke="#000000"
+            strokeWidth={6} // Even thicker outline for selection
+            opacity={0.3}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            pointerEvents="none" // Don't interfere with clicks
+          />
+        )}
+      </g>
     );
   };
 

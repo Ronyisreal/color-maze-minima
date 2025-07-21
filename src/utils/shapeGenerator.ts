@@ -425,8 +425,8 @@ const dividePoly = (shape: Point[]): [Point[], Point[]] => {
 const createBranchDivisions = (mainLine: Point[], shape: Point[], center: Point): Point[] => {
   const branches: Point[] = [];
   
-  // 30% chance to add branch lines for more complexity
-  if (Math.random() < 0.3 && mainLine.length > 2) {
+  // Reduce chance of branch lines to prevent creating very thin regions
+  if (Math.random() < 0.15 && mainLine.length > 2) { // Reduced from 30% to 15%
     const branchStart = mainLine[Math.floor(mainLine.length / 2)];
     
     // Find a random point on the perimeter for branch end
@@ -470,34 +470,33 @@ const createShortCurvyLine = (start: Point, end: Point, center: Point): Point[] 
 const createDivisionLine = (start: Point, end: Point, center: Point): Point[] => {
   const divisionPoints: Point[] = [start];
   
-  // Create much more curvy and tangled division lines
-  const numIntermediatePoints = 4 + Math.floor(Math.random() * 4); // 4-7 points for more complexity
+  // Reduce complexity to avoid extremely thin regions
+  const numIntermediatePoints = 2 + Math.floor(Math.random() * 3); // 2-4 points instead of 4-7
   
   for (let i = 1; i < numIntermediatePoints; i++) {
     const t = i / numIntermediatePoints;
     const baseX = start.x + t * (end.x - start.x);
     const baseY = start.y + t * (end.y - start.y);
     
-    // Add much more dramatic curves and tangles
+    // Reduce the dramatic curves to prevent extremely thin regions
     const toCenterX = center.x - baseX;
     const toCenterY = center.y - baseY;
     
-    // Create complex curvature with multiple sine waves for organic feel
-    const curvature1 = Math.sin(t * Math.PI * 2) * (Math.random() - 0.5) * 0.8;
-    const curvature2 = Math.sin(t * Math.PI * 4) * (Math.random() - 0.5) * 0.4;
-    const curvature3 = Math.sin(t * Math.PI * 6) * (Math.random() - 0.5) * 0.2;
+    // Reduce curvature complexity and amplitude
+    const curvature1 = Math.sin(t * Math.PI * 2) * (Math.random() - 0.5) * 0.4; // Reduced from 0.8
+    const curvature2 = Math.sin(t * Math.PI * 3) * (Math.random() - 0.5) * 0.2; // Reduced from 0.4
     
-    const totalCurvature = curvature1 + curvature2 + curvature3;
+    const totalCurvature = curvature1 + curvature2;
     
-    // Add perpendicular offset for more tangled lines
+    // Reduce perpendicular offset to avoid thin regions
     const perpX = -(end.y - start.y);
     const perpY = (end.x - start.x);
     const perpLength = Math.sqrt(perpX * perpX + perpY * perpY);
     const normalizedPerpX = perpLength > 0 ? perpX / perpLength : 0;
     const normalizedPerpY = perpLength > 0 ? perpY / perpLength : 0;
     
-    // Random tangent offset
-    const tangentOffset = (Math.random() - 0.5) * 60;
+    // Reduced tangent offset to prevent extremely thin regions
+    const tangentOffset = (Math.random() - 0.5) * 30; // Reduced from 60
     
     divisionPoints.push({
       x: baseX + toCenterX * totalCurvature + normalizedPerpX * tangentOffset,
