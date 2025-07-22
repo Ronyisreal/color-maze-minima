@@ -52,7 +52,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       toast({
         title: "Welcome!",
-        description: `Player ${name} is ready to play!`,
+        description: `${name} is ready to play!`,
       });
     } catch (error) {
       console.error('Error creating player:', error);
