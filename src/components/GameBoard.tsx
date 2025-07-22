@@ -497,6 +497,7 @@ export const GameBoard: React.FC = () => {
             <Card className="p-4">
               <GameStats 
                 level={level}
+                difficulty={difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
                 minimumColors={minimumColors}
                 colorsUsed={colorsUsed}
                 gameCompleted={gameCompleted}

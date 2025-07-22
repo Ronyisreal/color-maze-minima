@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 
 interface GameStatsProps {
   level: number;
+  difficulty: string;
   minimumColors: number;
   colorsUsed: number;
   gameCompleted: boolean;
@@ -18,6 +19,7 @@ interface GameStatsProps {
 
 export const GameStats: React.FC<GameStatsProps> = ({
   level,
+  difficulty,
   minimumColors,
   colorsUsed,
   gameCompleted,
@@ -76,7 +78,10 @@ export const GameStats: React.FC<GameStatsProps> = ({
               <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-2 rounded-lg">
                 <Star className="w-5 h-5 text-white" />
               </div>
-              Level
+              <div>
+                <div>Level {level}</div>
+                <div className="text-sm font-normal opacity-80">Mode {difficulty}</div>
+              </div>
             </span>
             <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white text-lg px-6 py-2 min-w-[3rem] flex items-center justify-center animate-scale-in rounded-full font-bold">
               {level}
