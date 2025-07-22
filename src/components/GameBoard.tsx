@@ -403,29 +403,15 @@ export const GameBoard: React.FC = () => {
     }
   };
 
-  // Show mode transition popup
-  if (showModeTransition && nextMode) {
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-primary/20 via-secondary to-accent/30 z-50 flex items-center justify-center">
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20 animate-scale-in text-center max-w-md mx-4">
-          <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-400" />
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Next Mode Activated!
-          </h1>
-          <p className="text-white/80 text-lg mb-6">
-            Great job! You're now advancing to {nextMode.charAt(0).toUpperCase() + nextMode.slice(1)} mode.
-          </p>
-          <Button
-            onClick={handleModeTransition}
-            size="lg"
-            className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 text-xl font-bold"
-          >
-            Start {nextMode.charAt(0).toUpperCase() + nextMode.slice(1)} Mode
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Handle mode transition automatically
+  useEffect(() => {
+    if (showModeTransition && nextMode) {
+      const timer = setTimeout(() => {
+        handleModeTransition();
+      }, 3000); // Auto-transition after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showModeTransition, nextMode]);
 
   // Show congratulations screen if all modes completed
   if (showCongratulations) {
@@ -550,6 +536,19 @@ export const GameBoard: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg text-center">
                       <h2 className="text-2xl font-bold text-red-600 mb-2">Time's Up!</h2>
                       <Button onClick={resetGame}>Try Again</Button>
+                    </div>
+                  </div>
+                )}
+                {/* Mode transition message overlay */}
+                {showModeTransition && nextMode && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-lg p-6 text-center max-w-md mx-4 animate-fade-in">
+                      <div className="text-lg text-gray-800 mb-2">
+                        Congratulations on completing the {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} mode!
+                      </div>
+                      <div className="text-3xl font-bold text-red-600">
+                        NEXT MODE ACTIVATED!
+                      </div>
                     </div>
                   </div>
                 )}
