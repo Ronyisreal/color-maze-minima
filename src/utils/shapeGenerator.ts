@@ -81,7 +81,7 @@ const calculateCentroid = (vertices: Point[]): Point => {
 };
 
 const doRegionsShareBoundary = (region1: Region, region2: Region): boolean => {
-  const tolerance = 15;
+  const tolerance = 8; // Reduced tolerance for more accurate boundary detection
 
   const centerDistance = distance(region1.center, region2.center);
   const maxDistance = Math.max(
@@ -91,14 +91,17 @@ const doRegionsShareBoundary = (region1: Region, region2: Region): boolean => {
 
   if (centerDistance > maxDistance) return false;
 
+  // Check if any vertices are very close (shared boundary points)
   for (const v1 of region1.vertices) {
     for (const v2 of region2.vertices) {
       if (distance(v1, v2) < tolerance) {
+        console.log(`Adjacency detected between ${region1.id} and ${region2.id}: vertices close (${distance(v1, v2).toFixed(2)})`);
         return true;
       }
     }
   }
 
+  // Check if any edges are very close (shared boundary segments)
   for (let i = 0; i < region1.vertices.length; i++) {
     const edge1Start = region1.vertices[i];
     const edge1End = region1.vertices[(i + 1) % region1.vertices.length];
@@ -107,6 +110,7 @@ const doRegionsShareBoundary = (region1: Region, region2: Region): boolean => {
       const edge2End = region2.vertices[(j + 1) % region2.vertices.length];
       const edgeDist = edgeToEdgeDistance(edge1Start, edge1End, edge2Start, edge2End);
       if (edgeDist < tolerance) {
+        console.log(`Adjacency detected between ${region1.id} and ${region2.id}: edges close (${edgeDist.toFixed(2)})`);
         return true;
       }
     }
