@@ -52,6 +52,8 @@ export const GameBoard: React.FC = () => {
   const [availableColors, setAvailableColors] = useState(AVAILABLE_COLORS.slice(0, 3));
   const [modeStartTime, setModeStartTime] = useState<number>(0);
   const [showCongratulations, setShowCongratulations] = useState(false);
+  const [showModeTransition, setShowModeTransition] = useState(false);
+  const [nextMode, setNextMode] = useState<Difficulty | null>(null);
 
   useEffect(() => {
     if (gameStarted && !gameCompleted && !gameEnded && timeLeft > 0) {
@@ -323,27 +325,13 @@ export const GameBoard: React.FC = () => {
         duration: 5000,
       });
 
-      // Auto-progression logic: automatically switch to next difficulty
+      // Show mode transition popup for Easy and Medium completion
       if (difficulty === 'easy') {
-        // Auto-switch to medium mode after completing easy
-        setTimeout(() => {
-          toast({
-            title: "Advancing to Medium Mode! 🔥",
-            description: "Get ready for a more challenging experience!",
-            duration: 3000,
-          });
-          changeDifficulty('medium');
-        }, 2000);
+        setNextMode('medium');
+        setShowModeTransition(true);
       } else if (difficulty === 'medium') {
-        // Auto-switch to hard mode after completing medium
-        setTimeout(() => {
-          toast({
-            title: "Advancing to Hard Mode! 💀",
-            description: "Prepare yourself for the ultimate challenge!",
-            duration: 3000,
-          });
-          changeDifficulty('hard');
-        }, 2000);
+        setNextMode('hard');
+        setShowModeTransition(true);
       } else {
         // Hard mode completed - check if all modes are completed
         setTimeout(() => {
@@ -405,6 +393,39 @@ export const GameBoard: React.FC = () => {
       setTimeout(() => setShowCongratulations(true), 1000);
     }
   }, [gameProgress.allModesCompleted]);
+
+  // Handle mode transition
+  const handleModeTransition = () => {
+    setShowModeTransition(false);
+    if (nextMode) {
+      changeDifficulty(nextMode);
+      setNextMode(null);
+    }
+  };
+
+  // Show mode transition popup
+  if (showModeTransition && nextMode) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-primary/20 via-secondary to-accent/30 z-50 flex items-center justify-center">
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/20 animate-scale-in text-center max-w-md mx-4">
+          <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-400" />
+          <h1 className="text-4xl font-bold text-white mb-4">
+            Next Mode Activated!
+          </h1>
+          <p className="text-white/80 text-lg mb-6">
+            Great job! You're now advancing to {nextMode.charAt(0).toUpperCase() + nextMode.slice(1)} mode.
+          </p>
+          <Button
+            onClick={handleModeTransition}
+            size="lg"
+            className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 text-xl font-bold"
+          >
+            Start {nextMode.charAt(0).toUpperCase() + nextMode.slice(1)} Mode
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Show congratulations screen if all modes completed
   if (showCongratulations) {
