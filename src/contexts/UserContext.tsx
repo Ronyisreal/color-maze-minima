@@ -51,7 +51,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUsernameState(name);
       
       toast({
-        title: "Welcome!",
+        title: "Welcome",
         description: `${name} is ready to play!`,
       });
     } catch (error) {
